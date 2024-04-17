@@ -1,6 +1,7 @@
 #include "lib.h"
 #include "globals.h"
 #include "front.h"
+#include "datastruct.h"
 
 
 typedef struct Labels {
@@ -8,6 +9,7 @@ typedef struct Labels {
     int address;
 }Labels [MAX_LABELS];
 
+int fun(AST ast){}
 
 static int countLineParts(char* line) {
     int counter = 0;
