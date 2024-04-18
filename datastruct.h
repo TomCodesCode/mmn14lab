@@ -48,21 +48,23 @@ struct DataDirective {
 struct Directive {
     enum DirectiveType type;
     union {
-        char *string;
-        char label[MAX_LABEL_LENGTH];
-        struct DataDirective data;
+        char *string; /*for .string*/
+        char *label; /*for .entry and .extern*/
+        struct DataDirective data; /*for .data*/
     } directive_options;
 };
 
 // Define the AST structure
 typedef struct AST {
     char *errors[20];
+    char *label_occurrence;
     enum {
         INSTRUCTION, DIRECTIVE, DEFINE, EMPTY
     } line_type;
 
     union {
         struct Define define;
+        
         struct {
             enum InstructionType inst_type;
             struct Operand operands[2];
