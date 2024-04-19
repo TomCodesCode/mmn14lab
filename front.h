@@ -1,3 +1,7 @@
+#include "globals.h"
+typedef char * t_commandLine[MAX_COMMAND_SIZE];
+
+
 
 /*
 
@@ -35,11 +39,11 @@ typedef struct AST {
                         int number;
                     }data_options;
                 };
-                
+
             }directive_options;
-            
+
         }directive;
-        
+
 
         struct {
             enum {
@@ -79,15 +83,15 @@ typedef struct AST {
                             char *label;
                         }index_options;
                     };
-                    
+
                 }operand_options;
-                
+
             }operands[2];
-            
+
         }instruction;
-        
+
     }ast_options;
-    
+
 }AST;
 */
 
@@ -225,13 +229,13 @@ typedef struct AST {
                             int number;
                             char * label2;
                         } index_select;
-                        
+
                     }index_op;
-                    
+
                 }operand_select;
-                
+
             }operands [2];
-            
+
         }instruction;
 
         typedef struct directive {
@@ -251,13 +255,13 @@ typedef struct AST {
                         char *label;
                     };
                 }data;
-                
-                
+
+
             };
-            
-            
+
+
         }directive;
-        
-        
+
+
     }commands;
 }AST;*/
