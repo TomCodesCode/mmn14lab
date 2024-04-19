@@ -3,20 +3,6 @@
 #include "datastruct.h"
 
 
-typedef struct Instructions {
-    char *inst;
-    int opcode;
-    char *src;
-    char *dest;
-}Instructions;
-
-
-Instructions inst_prop[16] = {{"mov", 0, "0123", "123"}, {"cmp", 1, "0123", "0123"}, {"add", 2, "0123", "123"}, {"sub", 3,"0123", "123"},
-                            {"not", 4, "-", "123"}, {"clr", 5, "-", "123"}, {"lea", 6, "12", "123"}, {"inc", 7, "-", "123"},
-                            {"dec", 8, "-", "123"}, {"jmp", 9, "-", "13"}, {"bne", 10, "-", "13"}, {"red", 11, "-", "123"}, 
-                            {"prn", 12, "-", "0123"}, {"jsr", 13, "-", "13"}, {"rts", 14, "-", "-"}, {"hlt", 15, "-", "-"}};
-
-
 int error_count = 0;
 
 static char *my_strdup(const char *src, int delta) {
@@ -27,17 +13,6 @@ static char *my_strdup(const char *src, int delta) {
         dst[len - 1] = '\0';
     }
     return dst;
-}
-
-
-static int isEmptyLine(char *line) {
-    int i = 0;
-    while (isspace(line[i]) && line[i] != '\0') {
-        i++;
-        if (line[i] == '\0')
-            return 1;
-    }
-    return 0;
 }
 
 int isSkipLine(const char *line) {
@@ -57,23 +32,24 @@ int isSkipLine(const char *line) {
     return 1; /*No non-printable characters found*/
 }
 
-char ** dismantleOperand(char *str) {
-    char opParts[2][MAX_LABEL_LENGTH];
-    
-    char *ptr1 = strchr(str, '[');
-    char *ptr2 = strchr(str, ']');
-    
-    strncpy(opParts[0], str, ptr1 - str - 1);
-    opParts[0][ptr1 - str - 1] = '\0';
-    strncpy(opParts[1], ptr1 + 1, ptr2 - ptr1 - 1);
-    opParts[1][ptr2 - ptr1 - 1] = '\0';
+char ** dismantleOperand(char *src, char **str) { /*separate the label and the index*/
+    str[0] = (char*)malloc(MAX_LABEL_LENGTH);
+    str[1] = (char*)malloc(MAX_LABEL_LENGTH);
 
-    return opParts;
+    char *ptr1 = strchr(src, '[');
+    char *ptr2 = strchr(src, ']');
+    
+    strncpy(str[0], src, ptr1 - src - 1);
+    str[0][ptr1 - src - 1] = '\0';
+    strncpy(str[1], ptr1 + 1, ptr2 - ptr1 - 1);
+    str[1][ptr2 - ptr1 - 1] = '\0';
+
+    return str;
 }
 
 static int islabel (char *str) {
     int length = strlen(str);
-    if (str[length - 1] == ":") return 1;
+    if (str[length - 1] == ':') return 1;
     return 0;
 }
 
@@ -140,10 +116,10 @@ static char** parseLine (char *line) {                 /*get a line, dismantle i
     char *ptr;
     int i = 0;
     strcpy(line_cpy, line);
-    token = strtok(line_cpy, " ,\t");
+    token = strtok(line_cpy, " =,\t");
     while (token != NULL) {
         ptr = token;
-        token = strtok(NULL, " ,\t");
+        token = strtok(NULL, " =,\t");
         if (token == NULL) {
             str[i] = my_strdup(ptr, -1);
             break;
@@ -159,37 +135,107 @@ static int determineType (char *line, char **command_line, AST *curr) {
     char *ptr;
 
     while (isspace(*line)) line++;
+    
+    if (!isSkipLine || strlen(command_line[0]) < 1) return EMPTY;
+
     if (!strcmp(command_line[0], ".define")) return DEFINE;
 
-    if (strlen(command_line[0]) < 1) return EMPTY;
-
-    if (!strcmp(command_line[1], ".string")){
-        curr->line_type = DIRECTIVE;
-        curr->commands.directive.type = STRING;
-        ptr = command_line[2] + 1; /*ignoring the "" in the string delaration*/
-        curr->commands.directive.directive_options.string = my_strdup(ptr, strchr(ptr, '"') - ptr);
-        return DIRECTIVE;
+    if (islabel(command_line[0])) {
+        if (!strcmp(command_line[1], ".string")) {
+            curr->commands.directive.directive_options.string.label = my_strdup(command_line[0], -1);
+            command_line = deleteFirstString(command_line);
+            curr->commands.directive.type = STRING;
+            return DIRECTIVE;
+        }
+        if (!strcmp(command_line[1], ".entry")) {
+            command_line = deleteFirstString(command_line);
+            printf("Warning: Label found before an entry declaration. Ignoring label.");
+            curr->commands.directive.type = ENTRY;
+            return DIRECTIVE;
+        }
+        if (!strcmp(command_line[1], ".extern")) {
+            command_line = deleteFirstString(command_line);
+            printf("Warning: Label found before an extern declaration. Ignoring label.");
+            curr->commands.directive.type = EXTERN;
+            return DIRECTIVE;
+        }
+        if (!strcmp(command_line[1], ".data")) {
+            curr->commands.directive.directive_options.data->label = my_strdup(command_line[0], -1);
+            command_line = deleteFirstString(command_line);
+            curr->commands.directive.type = DATA;
+            return DIRECTIVE;
+        }
     }
-    if (!strcmp(command_line[0], ".entry")) return DIRECTIVE;
-    if (!strcmp(command_line[0], ".extern")) return DIRECTIVE;
-    if (!strcmp(command_line[1], ".data")){
-        curr->line_type = DIRECTIVE;
-        curr->commands.directive.type = DATA;
-        return DIRECTIVE;
-    }
-
     for (i = 0; i < 16; i++){
-        if (!strcmp(command_line[0], inst_prop[i].inst)) return INSTRUCTION;
+        if (!strcmp(command_line[0], inst_prop[i].inst)) {
+            curr->commands.instruction.inst_type = i;
+            return INSTRUCTION;
+        }
     }
+    
     return EMPTY;
 }
 
-AST *createNode(char *line, Labels *labels) {
+static char **deleteFirstString(char **str) {
+    int i = 0;
+    free(str[0]);
+    while (str[i] != NULL) {
+        if (str[i + 1] == NULL) {
+            str [i] = NULL;
+            break;
+        }
+        str[i] = str[i + 1];
+        i++;
+    }
+    return str;
+}
+
+static int instOperatorPush(AST *ast, char **command_line, int i, int opTypeEnum, int op_type) {
+    char **str;
+    op_type = getOperandType(command_line[1 + i]);
+    ast->commands.instruction.operands[0].type = op_type;
+    switch (op_type) {
+        case IMMEDIATE: {
+            ast->commands.instruction.operands[i].operand_select.immediate = atoi(command_line[1 + i] + 1);
+            break;
+        }
+        case DIRECT: {
+            ast->commands.instruction.operands[i].operand_select.label = my_strdup(command_line[1 + i], -1);
+            break;
+        }
+        case INDEX_NUM: {
+            str = dismantleOperand(command_line[1 + i], str); /*separate the operand and the index*/
+            ast->commands.instruction.operands[i].operand_select.index_op.label1 = my_strdup(str[0], -1);
+            ast->commands.instruction.operands[i].operand_select.index_op.index_select.number = atoi(str[1]);
+            free(str);
+            break;
+        }
+        case INDEX_LABEL: {
+            str = dismantleOperand(command_line[1 + i], str); /*separate the operand and the index*/
+            ast->commands.instruction.operands[i].operand_select.index_op.label1 = my_strdup(str[0], -1);
+            ast->commands.instruction.operands[i].operand_select.index_op.index_select.label2 = my_strdup(str[1], -1);
+            free(str);
+            break;
+        }
+        case REGISTER: {
+            ast->commands.instruction.operands[i].operand_select.reg = atoi(command_line[1] + 1);
+            break;
+        }
+        default:
+            break;
+    }
+    
+    return 0;
+}
+
+AST *createNode(char *line) {
     char **command_line;
-    char *opPart1;
+    char *ptr;
+    char *endptr;
     int type_enum;
     int op_type;
     int i = 0;
+    int rc;
     AST *ast = (AST *)malloc(sizeof(AST));
     if (ast == NULL) {
         perror("Memory allocation failed (front->createNode)");
@@ -199,66 +245,64 @@ AST *createNode(char *line, Labels *labels) {
     command_line = parseLine(line);
     type_enum = determineType(line, command_line, ast);
 
+    if (type_enum = EMPTY) ast->line_type = EMPTY;
+
     if (islabel(command_line[0]) && type_enum != DIRECTIVE) { /*saving label name into the ast and deleting from the current str array*/
         ast->label_occurrence = my_strdup(command_line[0], -1);
-        free(command_line[0]);
-        while (command_line[i] != NULL) {
-            if (command_line[i + 1] == NULL) {
-                command_line [i] = NULL;
-                break;
-            }
-            command_line[i] = command_line[i + 1];
-            i++;
-        }
+        command_line = deleteFirstString(command_line);
     }else{ast->label_occurrence = NULL;} /*no label occurrance on this line, NULL the pointer*/
 
-    i= 0;
     switch (type_enum) {
         case INSTRUCTION: {
             ast->line_type = INSTRUCTION;
-            while (strcmp(command_line[0], inst_prop[i++].inst) && i < 16);
-            ast->commands.instruction.inst_type = --i;
-            op_type = getOperandType(command_line[1]);
-            ast->commands.instruction.operands[0].type = op_type;
-            switch (op_type) {
-                case IMMEDIATE: {
-                    ast->commands.instruction.operands[0].operand_select.immediate = atoi(command_line[1] + 1);
-                    break;
-                }
-                case DIRECT: {
-                    ast->commands.instruction.operands[0].operand_select.label = my_strdup(command_line[1], -1);
-                    break;
-                }
-                case INDEX_NUM: { //better way to approach this??
-                    ast->commands.instruction.operands[0].operand_select.index_op.label1 = my_strdup(dismantleOperand(command_line[1])[0], -1);
-                    opPart1 = my_strdup(dismantleOperand(command_line[1])[1], -1);
-                    ast->commands.instruction.operands[0].operand_select.index_op.index_select.number = atoi(opPart1);
-                    free(opPart1);
-                    break;
-                }
-                case INDEX_LABEL: {
-                    ast->commands.instruction.operands[0].operand_select.index_op.label1 = my_strdup(dismantleOperand(command_line[1])[0], -1);
-                    opPart1 = my_strdup(dismantleOperand(command_line[1])[1], -1);
-                    ast->commands.instruction.operands[0].operand_select.index_op.index_select.label2 = my_strdup(opPart1, -1);
-                    free(opPart1);
-                    break;
-                }
-                case REGISTER: {
-                    ast->commands.instruction.operands[0].operand_select.reg = atoi(command_line[1] + 1);
-                    break;
-                }
-                default:
-                    break;
+            for (i = 0; i < 2; i++){
+                rc = instOperatorPush(ast, command_line, i, type_enum, op_type);
             }
-            ast->commands.instruction.operands[0].operand_select.index_op.index_select.number = 1;
+            
             break;
         }
-        case DIRECTIVE:
+        case DIRECTIVE: {
+            ast->line_type = DIRECTIVE;
+            switch (ast->commands.directive.type)
+            {
+            case STRING:{
+                ptr = command_line[2] + 1;
+                ast->commands.directive.directive_options.string.string = my_strdup(ptr, strchr(ptr, '"') - ptr - 1); /*ignoring the "" in the string delaration*/
+                break;
+            }
+            case ENTRY || EXTERN:{
+                ast->commands.directive.directive_options.label = my_strdup(command_line[1], -1);
+                break;
+            }
+            case DATA:{
+                i = 0;
+                ptr = command_line[1];
+                while (ptr){
+                    if (isprint(ptr)){
+                        if (!strtol(ptr, &endptr, 10)){
+                            ast->commands.directive.directive_options.data[i].data_options.number = (int)strtol(ptr,&endptr,10);
+                        }else{
+                            ast->commands.directive.directive_options.data[i].data_options.label = my_strdup(ptr, -1);
+                        }
+                        i++;
+                        ptr = command_line[1 + i];
+                    }
+                    else printf ("Error: Not an alpha-numeric data type.");
+                }
+                
+                break;
+            }
+            default:
+                break;
+            }
+
             break;
-        case DEFINE:
-            break;
-        case EMPTY:
-            break;    
+        }
+        case DEFINE:{
+            ast->line_type = DEFINE;
+            ast->commands.define.label = my_strdup(command_line[1], -1);
+            ast->commands.define.number = atoi(command_line[2]);
+        }  
         default:
             break;
     }
@@ -266,55 +310,22 @@ AST *createNode(char *line, Labels *labels) {
     return ast;
 }
 
-static char *checkIfLabel(char *line) {
-    int i = 0;
-    char *ptr;
-    char str [MAX_LINE_LENGTH];
-    
-    strcpy(str, line);
-    ptr = strchr(str, ':');
-    if (!ptr) return NULL;
-    while (str + i != ptr) {
-        if (!isalnum(*(str + i))) return NULL;
-        i++;
-    }
-    strncpy(str, ptr - i, i);
-    return str;
-}
-
-int getLabelsParse(FILE *amFile, Labels *labels) {
-    int i = 0;
-    char line [MAX_LINE_LENGTH];
-    char *ptr;
-    while (fgets(line, MAX_LINE_LENGTH, amFile)) {
-        ptr = line;
-        while (isspace(*ptr)) ptr++;
-        if (checkIfLabel(ptr)) {
-
-        }
-    }
-    fseek(amFile, 0, SEEK_SET);
-}
-
 AST *parseAssembley (FILE *amFile) {
     AST *head = NULL;
     AST *current = NULL;
     AST *newnode = NULL;
-    Labels *labels = (Labels *)malloc(MAX_LABELS * sizeof(Labels));
     int rc;
     int i = 0;
     int type_enum;
     char line [MAX_LINE_LENGTH];
 
-    //rc = getLabelsParse(amFile, labels);
-
     while (fgets(line, MAX_LINE_LENGTH, amFile)) {
-        //type_enum = determineType(line, current);
-        if (isEmptyLine(line)) continue;
-        newnode = createNode(line, labels);
+        newnode = createNode(line);
 
         if (!newnode)
             return NULL;
+        
+        if (newnode->line_type = EMPTY) continue;
 
         if (!head)
             head = newnode;
@@ -324,4 +335,5 @@ AST *parseAssembley (FILE *amFile) {
         current = newnode;
     }
     
+    return head;
 }
