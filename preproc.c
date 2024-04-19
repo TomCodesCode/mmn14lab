@@ -177,9 +177,10 @@ void preasm (char * asFileName) {
     free(asFileName);
     return;
 }
-
+/*
 int main() {
 
     preasm("ps");
     return 0;
 }
+*/

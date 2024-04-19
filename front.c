@@ -1,12 +1,13 @@
 #include "lib.h"
 #include "front.h"
 #include "datastruct.h"
+#include <string.h>
 
 
 int error_count = 0;
 
 static char *my_strdup(const char *src, int delta) {
-    int len = (delta > 0) ? delta : strlen(src) + 1;
+    int len = (delta > 0) ? delta + 1 : strlen(src) + 1;
     char *dst = (char *)malloc(len);
     if (dst != NULL) {
         memcpy(dst, src, len - 1);
@@ -102,7 +103,7 @@ static int isRegister (char *str) {
     return 0;
 }
 
-static char **deleteFirstString(char **str) {
+static int deleteFirstString(char **str) {
     int i = 0;
     free(str[0]);
     while (str[i] != NULL) {
@@ -113,7 +114,7 @@ static char **deleteFirstString(char **str) {
         str[i] = str[i + 1];
         i++;
     }
-    return str;
+    return 0;
 }
 
 static int getOperandType (char *str) {
@@ -125,28 +126,35 @@ static int getOperandType (char *str) {
     return -1;
 }
 
-static char** parseLine (char *line, char **arr) {                 /*get a line, dismantle it into its properties*/
+static int parseLine (char *line, char **arr) {                 /*get a line, dismantle it into its properties*/
     char *token;
-    char line_cpy [MAX_LINE_LENGTH];
+    /*char line_cpy [MAX_LINE_LENGTH];*/
+    char *line_cpy;
     char *ptr;
+    char *endptr;
     int i = 0;
+    line_cpy = my_strdup(line, -1);
     strcpy(line_cpy, line);
-    token = strtok(line_cpy, " =,\t");
+    token = strtok(line_cpy, " =,\t\n\r");
     while (token != NULL) {
         ptr = token;
-        token = strtok(NULL, " =,\t");
+        token = strtok(NULL, " =,\t\n\r");
+        endptr = ptr + 1;
+        while(*endptr == ' ' || *endptr == '=' || *endptr == ',' || *endptr == '\t') endptr--;
         if (token == NULL) {
             arr[i] = my_strdup(ptr, -1);
             break;
         }
-        arr[i] = my_strdup(ptr, token - ptr);
+        arr[i] = my_strdup(ptr, endptr - ptr);
         i++;
     }
-    return arr;
+    free(line_cpy);
+    return 0;
 }
 
 static int determineType (char *line, char **command_line, AST *curr) {
     int i = 0;
+    int rc = 0;
 
     while (isspace(*line)) line++;
     
@@ -157,25 +165,25 @@ static int determineType (char *line, char **command_line, AST *curr) {
     if (islabel(command_line[0])) {
         if (!strcmp(command_line[1], ".string")) {
             curr->commands.directive.directive_options.string.label = my_strdup(command_line[0], -1);
-            command_line = deleteFirstString(command_line);
+            rc = deleteFirstString(command_line);
             curr->commands.directive.type = STRING;
             return DIRECTIVE;
         }
         if (!strcmp(command_line[1], ".entry")) {
-            command_line = deleteFirstString(command_line);
+            rc = deleteFirstString(command_line);
             printf("Warning: Label found before an entry declaration. Ignoring label.");
             curr->commands.directive.type = ENTRY;
             return DIRECTIVE;
         }
         if (!strcmp(command_line[1], ".extern")) {
-            command_line = deleteFirstString(command_line);
+            rc = deleteFirstString(command_line);
             printf("Warning: Label found before an extern declaration. Ignoring label.");
             curr->commands.directive.type = EXTERN;
             return DIRECTIVE;
         }
         if (!strcmp(command_line[1], ".data")) {
             curr->commands.directive.directive_options.data->label = my_strdup(command_line[0], -1);
-            command_line = deleteFirstString(command_line);
+            rc = deleteFirstString(command_line);
             curr->commands.directive.type = DATA;
             return DIRECTIVE;
         }
@@ -186,7 +194,7 @@ static int determineType (char *line, char **command_line, AST *curr) {
             return INSTRUCTION;
         }
     }
-    
+    if (rc != 0) return -1;
     return EMPTY;
 }
 
@@ -229,7 +237,7 @@ static int instOperatorPush(AST *ast, char **command_line, int i, int opTypeEnum
 }
 
 AST *createNode(char *line) {
-    char **command_line = NULL;
+    char command_line[MAX_COMMAND_SIZE][MAX_LABEL_LENGTH];
     char *ptr;
     char *endptr;
     int type_enum;
@@ -242,14 +250,14 @@ AST *createNode(char *line) {
         exit(EXIT_FAILURE);
     }
     
-    command_line = parseLine(line, command_line);
+    rc = parseLine(line, command_line); /*check for error code*/
     type_enum = determineType(line, command_line, ast);
 
     if (type_enum == EMPTY) ast->line_type = EMPTY;
 
     if (islabel(command_line[0]) && type_enum != DIRECTIVE) { /*saving label name into the ast and deleting from the current str array*/
         ast->label_occurrence = my_strdup(command_line[0], -1);
-        command_line = deleteFirstString(command_line);
+        rc = deleteFirstString(command_line); /*check for error code*/
     }else{ast->label_occurrence = NULL;} /*no label occurrance on this line, NULL the pointer*/
 
     switch (type_enum) {
@@ -279,7 +287,7 @@ AST *createNode(char *line) {
                 i = 0;
                 ptr = command_line[1];
                 while (ptr){
-                    if (isprint(ptr)){
+                    if (isprint(*ptr)){
                         if (!strtol(ptr, &endptr, 10)){
                             ast->commands.directive.directive_options.data[i].data_options.number = (int)strtol(ptr,&endptr,10);
                         }else{
@@ -307,6 +315,7 @@ AST *createNode(char *line) {
         default:
             break;
     }
+    
     error_count = 0;
     return ast;
 }
