@@ -7,7 +7,7 @@ enum InstructionType {
 };
 
 enum OperandType {
-    IMMEDIATE, DIRECT, INDEX_NUM, INDEX_REG, INDEX_LABEL, REGISTER
+    IMMEDIATE, DIRECT, INDEX_NUM, INDEX_LABEL, REGISTER
 };
 
 struct Define {
@@ -40,21 +40,26 @@ enum DirectiveType {
 struct DataDirective {
     char *label;
     union {
-        int reg;
+        int number;
         char *label;
     } data_options;
 };
 
+struct String {
+    char *label;
+    char *string;
+};
+
+
 struct Directive {
     enum DirectiveType type;
     union {
-        char *string; /*for .string*/
+        struct String string; /*for .string*/
         char *label; /*for .entry and .extern*/
-        struct DataDirective data; /*for .data*/
+        struct DataDirective data [50]; /*for .data. can  hold up to 30 objects.*/
     } directive_options;
 };
 
-// Define the AST structure
 typedef struct AST {
     char *errors[20];
     char *label_occurrence;
@@ -82,17 +87,14 @@ typedef struct Labels {
     int label_adress;
 }Labels;
 
-int main() {
-    // Example usage
-    AST ast;
+typedef struct Instructions {
+    char *inst;
+    int opcode;
+    char *src;
+    char *dest;
+}Instructions;
 
-    // Initialize and use the AST structure
-    ast.line_type = INSTRUCTION;
-    ast.commands.instruction.inst_type = MOV;
-    ast.commands.instruction.operands[0].type = IMMEDIATE;
-    ast.commands.instruction.operands[0].operand_select.immediate = 10;
-
-    printf("AST created successfully.\n");
-
-    return 0;
-}
+Instructions inst_prop[16] = {{"mov", 0, "0123", "123"}, {"cmp", 1, "0123", "0123"}, {"add", 2, "0123", "123"}, {"sub", 3,"0123", "123"},
+                            {"not", 4, "-", "123"}, {"clr", 5, "-", "123"}, {"lea", 6, "12", "123"}, {"inc", 7, "-", "123"},
+                            {"dec", 8, "-", "123"}, {"jmp", 9, "-", "13"}, {"bne", 10, "-", "13"}, {"red", 11, "-", "123"}, 
+                            {"prn", 12, "-", "0123"}, {"jsr", 13, "-", "13"}, {"rts", 14, "-", "-"}, {"hlt", 15, "-", "-"}};
