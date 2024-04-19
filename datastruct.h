@@ -70,7 +70,7 @@ typedef struct AST {
 
     union {
         struct Define define;
-        
+
         struct {
             enum InstructionType inst_type;
             struct Operand operands[2];
@@ -80,11 +80,11 @@ typedef struct AST {
     } commands;
 
     struct AST *next;
-    
+
 } AST;
 
 typedef struct Labels {
-    char label_name [MAX_LABEL_LENGTH];
+    char label_name [MAX_TOKEN_LENGTH];
     int label_adress;
 }Labels;
 
@@ -95,7 +95,7 @@ typedef struct Instructions {
     char *dest;
 }Instructions;
 
-Instructions inst_prop[16] = {{"mov", 0, "0123", "123"}, {"cmp", 1, "0123", "0123"}, {"add", 2, "0123", "123"}, {"sub", 3,"0123", "123"},
+Instructions inst_prop[INST_SET_SIZE] = {{"mov", 0, "0123", "123"}, {"cmp", 1, "0123", "0123"}, {"add", 2, "0123", "123"}, {"sub", 3,"0123", "123"},
                             {"not", 4, "-", "123"}, {"clr", 5, "-", "123"}, {"lea", 6, "12", "123"}, {"inc", 7, "-", "123"},
-                            {"dec", 8, "-", "123"}, {"jmp", 9, "-", "13"}, {"bne", 10, "-", "13"}, {"red", 11, "-", "123"}, 
+                            {"dec", 8, "-", "123"}, {"jmp", 9, "-", "13"}, {"bne", 10, "-", "13"}, {"red", 11, "-", "123"},
                             {"prn", 12, "-", "0123"}, {"jsr", 13, "-", "13"}, {"rts", 14, "-", "-"}, {"hlt", 15, "-", "-"}};

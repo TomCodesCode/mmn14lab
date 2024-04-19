@@ -20,13 +20,13 @@ static int isSkipLine(const char *line) {
 
     int i = 0;
     if (!line)
-        return 0;
+        return 1;
 
     if (*line == ';') /*Check if it's comment line*/
-        return 0;
+        return 1;
 
     while (line[i] != '\0') { /*Check if character is not printable (including space)*/
-        if (!isprint(line[i++])) { /*Found a non-printable character*/
+        if (isprint(line[i++])) { /*Found a non-printable character*/
             return 0;
         }
     }
@@ -36,13 +36,13 @@ static int isSkipLine(const char *line) {
 static char ** dismantleOperand(char *src, char **str) { /*separate the label and the index*/
     char *ptr1;
     char *ptr2;
-    
-    str[0] = (char*)malloc(MAX_LABEL_LENGTH);
-    str[1] = (char*)malloc(MAX_LABEL_LENGTH);
+
+    str[0] = (char*)malloc(MAX_TOKEN_LENGTH);
+    str[1] = (char*)malloc(MAX_TOKEN_LENGTH);
 
     ptr1 = strchr(src, '[');
     ptr2 = strchr(src, ']');
-    
+
     strncpy(str[0], src, ptr1 - src - 1);
     str[0][ptr1 - src - 1] = '\0';
     strncpy(str[1], ptr1 + 1, ptr2 - ptr1 - 1);
@@ -103,17 +103,13 @@ static int isRegister (char *str) {
     return 0;
 }
 
-static int deleteFirstString(char **str) {
-    int i = 0;
-    free(str[0]);
-    while (str[i] != NULL) {
-        if (str[i + 1] == NULL) {
-            str [i] = NULL;
-            break;
-        }
-        str[i] = str[i + 1];
-        i++;
+static int deleteFirstString(t_commandLine str) {
+    int i;
+
+    for (i = 0; i < MAX_COMMAND_SIZE-1; i++) {
+        str[i] = str[i+1];
     }
+    str[i] = NULL;
     return 0;
 }
 
@@ -126,75 +122,111 @@ static int getOperandType (char *str) {
     return -1;
 }
 
-static int parseLine (char *line, char **arr) {                 /*get a line, dismantle it into its properties*/
+static int parseLine (char *line, t_commandLine arr) {                 /*get a line, dismantle it into its properties*/
     char *token;
     /*char line_cpy [MAX_LINE_LENGTH];*/
     char *line_cpy;
     char *ptr;
     char *endptr;
+    char *token_delim = " =,\t\n\r";
     int i = 0;
+
+    for (i = 0; i < MAX_COMMAND_SIZE; i++) {
+        arr[i] = NULL;
+    }
+
     line_cpy = my_strdup(line, -1);
     strcpy(line_cpy, line);
-    token = strtok(line_cpy, " =,\t\n\r");
+
+    i =  0;
+
+    token = strtok(line_cpy, token_delim);
     while (token != NULL) {
+        /*
         ptr = token;
         token = strtok(NULL, " =,\t\n\r");
         endptr = ptr + 1;
         while(*endptr == ' ' || *endptr == '=' || *endptr == ',' || *endptr == '\t') endptr--;
         if (token == NULL) {
-            arr[i] = my_strdup(ptr, -1);
+            if (strlen(ptr) > MAX_TOKEN_LENGTH) {
+                return -1;
+            }
+            strcpy(arr[i], ptr);
             break;
         }
-        arr[i] = my_strdup(ptr, endptr - ptr);
+        if ((endptr - ptr) > MAX_TOKEN_LENGTH) {
+            return -1;
+        }
+        */
+        if (strlen(token) > MAX_TOKEN_LENGTH) {
+            /* token is too long */
+            return -1;
+        }
+        arr[i] = (char*)malloc(strlen(token)+1);
+        strcpy(arr[i], token);
+
+        token = strtok(NULL, token_delim);
         i++;
     }
     free(line_cpy);
     return 0;
 }
 
-static int determineType (char *line, char **command_line, AST *curr) {
+static int determineType (char *line, t_commandLine command_line, AST *curr) {
     int i = 0;
-    int rc = 0;
+    int token_idx = 0;
 
     while (isspace(*line)) line++;
-    
-    if (!isSkipLine(line) || strlen(command_line[0]) < 1) return EMPTY;
 
-    if (!strcmp(command_line[0], ".define")) return DEFINE;
+    if (isSkipLine(line) || strlen(command_line[token_idx]) == 0)
+        return EMPTY;
 
-    if (islabel(command_line[0])) {
-        if (!strcmp(command_line[1], ".string")) {
-            curr->commands.directive.directive_options.string.label = my_strdup(command_line[0], -1);
-            rc = deleteFirstString(command_line);
-            curr->commands.directive.type = STRING;
-            return DIRECTIVE;
-        }
-        if (!strcmp(command_line[1], ".entry")) {
-            rc = deleteFirstString(command_line);
-            printf("Warning: Label found before an entry declaration. Ignoring label.");
-            curr->commands.directive.type = ENTRY;
-            return DIRECTIVE;
-        }
-        if (!strcmp(command_line[1], ".extern")) {
-            rc = deleteFirstString(command_line);
-            printf("Warning: Label found before an extern declaration. Ignoring label.");
-            curr->commands.directive.type = EXTERN;
-            return DIRECTIVE;
-        }
-        if (!strcmp(command_line[1], ".data")) {
-            curr->commands.directive.directive_options.data->label = my_strdup(command_line[0], -1);
-            rc = deleteFirstString(command_line);
-            curr->commands.directive.type = DATA;
-            return DIRECTIVE;
-        }
+    if (!strcmp(command_line[token_idx], ".define"))
+        return DEFINE;
+
+    if (islabel(command_line[token_idx])) {
+        token_idx++;
     }
-    for (i = 0; i < 16; i++){
-        if (!strcmp(command_line[0], inst_prop[i].inst)) {
+    if (!strcmp(command_line[token_idx], ".string")) {
+        if (token_idx)
+            curr->commands.directive.directive_options.string.label = my_strdup(command_line[0], -1);
+
+        deleteFirstString(command_line);
+        curr->commands.directive.type = STRING;
+        return DIRECTIVE;
+    }
+    if (!strcmp(command_line[token_idx], ".entry")) {
+        if (token_idx) {
+            deleteFirstString(command_line);
+            printf("Warning: Label found before an entry declaration. Ignoring label.");
+        }
+        curr->commands.directive.type = ENTRY;
+        return DIRECTIVE;
+    }
+    if (!strcmp(command_line[token_idx], ".extern")) {
+        if (token_idx) {
+            deleteFirstString(command_line);
+            printf("Warning: Label found before an extern declaration. Ignoring label.");
+        }
+        curr->commands.directive.type = EXTERN;
+        return DIRECTIVE;
+    }
+    if (!strcmp(command_line[token_idx], ".data")) {
+        if (token_idx) {
+            curr->commands.directive.directive_options.data->label = my_strdup(command_line[0], -1);
+            deleteFirstString(command_line);
+        }
+        curr->commands.directive.type = DATA;
+        return DIRECTIVE;
+    }
+
+    for (i = 0; i < INST_SET_SIZE; i++) {
+        if (!strcmp(command_line[token_idx], inst_prop[i].inst)) {
             curr->commands.instruction.inst_type = i;
             return INSTRUCTION;
         }
     }
-    if (rc != 0) return -1;
+
     return EMPTY;
 }
 
@@ -232,24 +264,24 @@ static int instOperatorPush(AST *ast, char **command_line, int i, int opTypeEnum
         default:
             break;
     }
-    
+
     return 0;
 }
 
 AST *createNode(char *line) {
-    char command_line[MAX_COMMAND_SIZE][MAX_LABEL_LENGTH];
+    t_commandLine command_line;
     char *ptr;
     char *endptr;
     int type_enum;
     int op_type = 0;
     int i = 0;
     int rc;
-    AST *ast = (AST *)malloc(sizeof(AST));
+    AST *ast = (AST *)calloc(sizeof(AST), 1);
     if (ast == NULL) {
         perror("Memory allocation failed (front->createNode)");
         exit(EXIT_FAILURE);
     }
-    
+
     rc = parseLine(line, command_line); /*check for error code*/
     type_enum = determineType(line, command_line, ast);
 
@@ -267,7 +299,7 @@ AST *createNode(char *line) {
                 rc = instOperatorPush(ast, command_line, i, type_enum, op_type);
                 if (rc != 0) printf("Error getting operators.");
             }
-            
+
             break;
         }
         case DIRECTIVE: {
@@ -298,7 +330,7 @@ AST *createNode(char *line) {
                     }
                     else printf ("Error: Not an alpha-numeric data type.");
                 }
-                
+
                 break;
             }
             default:
@@ -311,11 +343,11 @@ AST *createNode(char *line) {
             ast->line_type = DEFINE;
             ast->commands.define.label = my_strdup(command_line[1], -1);
             ast->commands.define.number = atoi(command_line[2]);
-        }  
+        }
         default:
             break;
     }
-    
+
     error_count = 0;
     return ast;
 }
@@ -331,7 +363,7 @@ AST *parseAssembley (FILE *amFile) {
 
         if (!newnode)
             return NULL;
-        
+
         if (newnode->line_type == EMPTY) continue;
 
         if (!head)
