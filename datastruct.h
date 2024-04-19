@@ -1,6 +1,8 @@
 #include "globals.h"
 #include <stdio.h>
 
+#define NUM_OF_OPERANDS 2
+
 /*Define enums for instruction types and operand types*/
 enum InstructionType {
     MOV, CMP, ADD, SUB, NOT, CLR, LEA, INC, DEC, JMP, BNE, RED, PRN, JSR, RTS, HLT
@@ -66,25 +68,25 @@ typedef struct AST {
     char *label_occurrence;
     enum {
         INSTRUCTION, DIRECTIVE, DEFINE, EMPTY
-    } line_type;
+    } cmd_type;
 
     union {
         struct Define define;
-        
+
         struct {
             enum InstructionType inst_type;
-            struct Operand operands[2];
+            struct Operand operands[NUM_OF_OPERANDS];
         } instruction;
 
         struct Directive directive;
-    } commands;
+    } command;
 
     struct AST *next;
-    
+
 } AST;
 
 typedef struct Labels {
-    char label_name [MAX_LABEL_LENGTH];
+    char label_name [MAX_TOKEN_LENGTH];
     int label_adress;
 }Labels;
 
@@ -93,9 +95,9 @@ typedef struct Instructions {
     int opcode;
     char *src;
     char *dest;
-}Instructions;
+} Instructions;
 
-Instructions inst_prop[16] = {{"mov", 0, "0123", "123"}, {"cmp", 1, "0123", "0123"}, {"add", 2, "0123", "123"}, {"sub", 3,"0123", "123"},
+Instructions inst_prop[INST_SET_SIZE] = {{"mov", 0, "0123", "123"}, {"cmp", 1, "0123", "0123"}, {"add", 2, "0123", "123"}, {"sub", 3,"0123", "123"},
                             {"not", 4, "-", "123"}, {"clr", 5, "-", "123"}, {"lea", 6, "12", "123"}, {"inc", 7, "-", "123"},
-                            {"dec", 8, "-", "123"}, {"jmp", 9, "-", "13"}, {"bne", 10, "-", "13"}, {"red", 11, "-", "123"}, 
+                            {"dec", 8, "-", "123"}, {"jmp", 9, "-", "13"}, {"bne", 10, "-", "13"}, {"red", 11, "-", "123"},
                             {"prn", 12, "-", "0123"}, {"jsr", 13, "-", "13"}, {"rts", 14, "-", "-"}, {"hlt", 15, "-", "-"}};
