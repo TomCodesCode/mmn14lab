@@ -15,7 +15,7 @@ static char *my_strdup(const char *src, int delta) {
     return dst;
 }
 
-int isSkipLine(const char *line) {
+static int isSkipLine(const char *line) {
 
     int i = 0;
     if (!line)
@@ -32,12 +32,15 @@ int isSkipLine(const char *line) {
     return 1; /*No non-printable characters found*/
 }
 
-char ** dismantleOperand(char *src, char **str) { /*separate the label and the index*/
+static char ** dismantleOperand(char *src, char **str) { /*separate the label and the index*/
+    char *ptr1;
+    char *ptr2;
+    
     str[0] = (char*)malloc(MAX_LABEL_LENGTH);
     str[1] = (char*)malloc(MAX_LABEL_LENGTH);
 
-    char *ptr1 = strchr(src, '[');
-    char *ptr2 = strchr(src, ']');
+    ptr1 = strchr(src, '[');
+    ptr2 = strchr(src, ']');
     
     strncpy(str[0], src, ptr1 - src - 1);
     str[0][ptr1 - src - 1] = '\0';
@@ -71,7 +74,6 @@ static int isDirect(char *str) {
 }
 
 static int isIndexNum (char *str) {
-    int i = 0;
     char *ptr1 = strchr(str, '[');
     char *ptr2 = strchr(str, ']');
     if ((ptr1 > str) && ptr1 && ptr2) {
@@ -100,6 +102,20 @@ static int isRegister (char *str) {
     return 0;
 }
 
+static char **deleteFirstString(char **str) {
+    int i = 0;
+    free(str[0]);
+    while (str[i] != NULL) {
+        if (str[i + 1] == NULL) {
+            str [i] = NULL;
+            break;
+        }
+        str[i] = str[i + 1];
+        i++;
+    }
+    return str;
+}
+
 static int getOperandType (char *str) {
     if (isImmediate(str)) return IMMEDIATE;
     if (isDirect(str)) return DIRECT;
@@ -109,10 +125,9 @@ static int getOperandType (char *str) {
     return -1;
 }
 
-static char** parseLine (char *line) {                 /*get a line, dismantle it into its properties*/
+static char** parseLine (char *line, char **arr) {                 /*get a line, dismantle it into its properties*/
     char *token;
-    char *line_cpy [MAX_LABEL_LENGTH];
-    char *str [MAX_LABEL_LENGTH];
+    char line_cpy [MAX_LINE_LENGTH];
     char *ptr;
     int i = 0;
     strcpy(line_cpy, line);
@@ -121,22 +136,21 @@ static char** parseLine (char *line) {                 /*get a line, dismantle i
         ptr = token;
         token = strtok(NULL, " =,\t");
         if (token == NULL) {
-            str[i] = my_strdup(ptr, -1);
+            arr[i] = my_strdup(ptr, -1);
             break;
         }
-        str[i] = my_strdup(ptr, token - ptr);
+        arr[i] = my_strdup(ptr, token - ptr);
         i++;
     }
-    return str;
+    return arr;
 }
 
 static int determineType (char *line, char **command_line, AST *curr) {
     int i = 0;
-    char *ptr;
 
     while (isspace(*line)) line++;
     
-    if (!isSkipLine || strlen(command_line[0]) < 1) return EMPTY;
+    if (!isSkipLine(line) || strlen(command_line[0]) < 1) return EMPTY;
 
     if (!strcmp(command_line[0], ".define")) return DEFINE;
 
@@ -176,22 +190,8 @@ static int determineType (char *line, char **command_line, AST *curr) {
     return EMPTY;
 }
 
-static char **deleteFirstString(char **str) {
-    int i = 0;
-    free(str[0]);
-    while (str[i] != NULL) {
-        if (str[i + 1] == NULL) {
-            str [i] = NULL;
-            break;
-        }
-        str[i] = str[i + 1];
-        i++;
-    }
-    return str;
-}
-
 static int instOperatorPush(AST *ast, char **command_line, int i, int opTypeEnum, int op_type) {
-    char **str;
+    char **str = NULL;
     op_type = getOperandType(command_line[1 + i]);
     ast->commands.instruction.operands[0].type = op_type;
     switch (op_type) {
@@ -229,11 +229,11 @@ static int instOperatorPush(AST *ast, char **command_line, int i, int opTypeEnum
 }
 
 AST *createNode(char *line) {
-    char **command_line;
+    char **command_line = NULL;
     char *ptr;
     char *endptr;
     int type_enum;
-    int op_type;
+    int op_type = 0;
     int i = 0;
     int rc;
     AST *ast = (AST *)malloc(sizeof(AST));
@@ -242,10 +242,10 @@ AST *createNode(char *line) {
         exit(EXIT_FAILURE);
     }
     
-    command_line = parseLine(line);
+    command_line = parseLine(line, command_line);
     type_enum = determineType(line, command_line, ast);
 
-    if (type_enum = EMPTY) ast->line_type = EMPTY;
+    if (type_enum == EMPTY) ast->line_type = EMPTY;
 
     if (islabel(command_line[0]) && type_enum != DIRECTIVE) { /*saving label name into the ast and deleting from the current str array*/
         ast->label_occurrence = my_strdup(command_line[0], -1);
@@ -257,6 +257,7 @@ AST *createNode(char *line) {
             ast->line_type = INSTRUCTION;
             for (i = 0; i < 2; i++){
                 rc = instOperatorPush(ast, command_line, i, type_enum, op_type);
+                if (rc != 0) printf("Error getting operators.");
             }
             
             break;
@@ -314,9 +315,6 @@ AST *parseAssembley (FILE *amFile) {
     AST *head = NULL;
     AST *current = NULL;
     AST *newnode = NULL;
-    int rc;
-    int i = 0;
-    int type_enum;
     char line [MAX_LINE_LENGTH];
 
     while (fgets(line, MAX_LINE_LENGTH, amFile)) {
@@ -325,7 +323,7 @@ AST *parseAssembley (FILE *amFile) {
         if (!newnode)
             return NULL;
         
-        if (newnode->line_type = EMPTY) continue;
+        if (newnode->line_type == EMPTY) continue;
 
         if (!head)
             head = newnode;
@@ -334,6 +332,13 @@ AST *parseAssembley (FILE *amFile) {
 
         current = newnode;
     }
-    
+
     return head;
+}
+
+int main(){
+    FILE *amFile = fopen("ps.am", "r");
+    parseAssembley(amFile);
+    fclose(amFile);
+    return 0;
 }

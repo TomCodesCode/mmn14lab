@@ -1,7 +1,7 @@
 #include "globals.h"
 #include <stdio.h>
 
-// Define enums for instruction types and operand types
+/*Define enums for instruction types and operand types*/
 enum InstructionType {
     MOV, CMP, ADD, SUB, NOT, CLR, LEA, INC, DEC, JMP, BNE, RED, PRN, JSR, RTS, HLT
 };
@@ -16,7 +16,7 @@ struct Define {
 };
 
 
-// Define structures for instruction operands
+/*Define structures for instruction operands*/
 struct Operand {
     enum OperandType type;
     union {
@@ -32,7 +32,8 @@ struct Operand {
         } index_op;
     } operand_select;
 };
-// Define structures for directives
+
+/*Define structures for directives*/
 enum DirectiveType {
     STRING, ENTRY, EXTERN, DATA
 };
@@ -78,7 +79,7 @@ typedef struct AST {
         struct Directive directive;
     } commands;
 
-    AST *next;
+    struct AST *next;
     
 } AST;
 
