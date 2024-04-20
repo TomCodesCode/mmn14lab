@@ -423,7 +423,7 @@ AST *parseAssembley (FILE *amFile) {
 }
 
 int main(){
-    FILE *amFile = fopen("ps.am", "r");
+    FILE *amFile = fopen("test.asm", "r");
     parseAssembley(amFile);
     fclose(amFile);
     return 0;
