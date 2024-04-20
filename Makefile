@@ -6,8 +6,9 @@ CFILES = front.c errors.c
 
 mmn14lab: $(CFILES) $(DEPS)
 	$(CC) -o $@ $(CFILES) $(CFLAGS)
+	-cp $@ a.out
 
 all: mmn14lab
 
 clean:
-	-rm mmn14lab *.o
+	-rm mmn14lab *.o a.out
