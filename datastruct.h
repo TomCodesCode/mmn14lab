@@ -66,7 +66,7 @@ typedef struct AST {
     char *label_occurrence;
     enum {
         INSTRUCTION, DIRECTIVE, DEFINE, EMPTY
-    } line_type;
+    } cmd_type;
 
     union {
         struct Define define;
@@ -77,7 +77,7 @@ typedef struct AST {
         } instruction;
 
         struct Directive directive;
-    } commands;
+    } command;
 
     struct AST *next;
 
@@ -93,7 +93,7 @@ typedef struct Instructions {
     int opcode;
     char *src;
     char *dest;
-}Instructions;
+} Instructions;
 
 Instructions inst_prop[INST_SET_SIZE] = {{"mov", 0, "0123", "123"}, {"cmp", 1, "0123", "0123"}, {"add", 2, "0123", "123"}, {"sub", 3,"0123", "123"},
                             {"not", 4, "-", "123"}, {"clr", 5, "-", "123"}, {"lea", 6, "12", "123"}, {"inc", 7, "-", "123"},

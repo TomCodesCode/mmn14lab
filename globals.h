@@ -6,3 +6,4 @@
 #define START_ADDRESS 100
 #define MAX_COMMAND_SIZE 6
 #define INST_SET_SIZE 16
+#define REG_NAME_LEN 2
