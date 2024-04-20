@@ -426,17 +426,21 @@ AST *parseAssembley (FILE *amFile) {
 
 char *getcwd(char *buf, size_t size);
 
-int main() {
+int main(int argc, char *argv[]) {
     char cwd[128];
-    const char * filename = "test.asm";
+    FILE *amFile = NULL;
+    char * filename = "test.asm";
 
-    FILE *amFile = fopen(filename, "r");
+    if (argc > 1)
+        filename = argv[1];
+
+    amFile = fopen(filename, "r");
 
     getcwd(cwd, sizeof(cwd));
     
     if (!amFile)
     {
-        printf("File not found: %s in [%s]\n", filename, cwd);
+        printf("File not found: No '%s' in [%s]\n", filename, cwd);
         return -1;
     }
     parseAssembley(amFile);
