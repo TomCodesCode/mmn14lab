@@ -423,8 +423,23 @@ AST *parseAssembley (FILE *amFile) {
     return head;
 }
 
-int main(){
-    FILE *amFile = fopen("test.asm", "r");
+
+
+char *getcwd(char *buf, size_t size);
+
+int main() {
+    char cwd[128];
+    const char * filename = "test.asm";
+
+    FILE *amFile = fopen(filename, "r");
+
+    getcwd(cwd, sizeof(cwd));
+    
+    if (!amFile)
+    {
+        printf("File not found: %s in [%s]\n", filename, cwd);
+        return -1;
+    }
     parseAssembley(amFile);
     fclose(amFile);
     return 0;
