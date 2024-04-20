@@ -4,8 +4,6 @@
 #include "datastruct.h"
 #include "errors.h"
 
-int error_count = 0;
-
 static char *my_strdup(const char *src, int delta) {
     int len = (delta > 0) ? (delta + 1) : strlen(src) + 1;
     char *dst = (char *)malloc(len);
@@ -30,11 +28,12 @@ static int isSkipLine(const char *line){
         return TRUE;
 
     while (line[i] != '\0') { /*Check if character is not printable (including space)*/
-        if (isprint(line[i++])) { /*Found a non-printable character*/
+        if (isprint(line[i]) && line[i] != ' ' ) { 
             return FALSE;
         }
+        i++;
     }
-    return TRUE; /*No non-printable characters found*/
+    return TRUE;
 }
 
 static int dismantleOperand(char *src, char **str) { /*separate the label and the index*/
@@ -327,7 +326,10 @@ AST *createNode(char *line) {
 
     type_enum = determineType(line, command_line, ast);
 
-    if (type_enum == EMPTY) ast->cmd_type = EMPTY;
+    if (type_enum == EMPTY) {
+        ast->cmd_type = EMPTY;
+        return ast;
+    }
 
     if (islabel(command_line[0])) { /*saving label name into the ast and deleting from the current str array*/
         ast->label_occurrence = my_strdup(command_line[0], -1);
@@ -392,7 +394,6 @@ AST *createNode(char *line) {
             break;
     }
 
-    error_count = 0;
     return ast;
 }
 
