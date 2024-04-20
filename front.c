@@ -156,8 +156,6 @@ static int parseLine (char *line, t_commandLine arr) {                 /*get a l
     char *token;
     /*char line_cpy [MAX_LINE_LENGTH];*/
     char *line_cpy;
-    char *ptr;
-    char *endptr;
     char *token_delim = " =,\t\n\r";
     int i = 0;
 
