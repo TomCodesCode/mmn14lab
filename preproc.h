@@ -4,7 +4,7 @@
 
 typedef struct Macro {
     int line_count;
-    char macro_name [MAX_LABEL_LENGTH];
+    char macro_name [MAX_TOKEN_LENGTH];
     char * macro_contents;
 }Macro;
 
