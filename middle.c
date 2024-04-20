@@ -2,51 +2,73 @@
 #include "globals.h"
 #include "front.h"
 #include "datastruct.h"
+#include "errors.h"
 
 
-typedef struct Labels {
-    char *labelname;
-    int address;
-}Labels [MAX_LABELS];
-
-int fun(AST ast){}
-
-static int countLineParts(char* line) {
-    int counter = 0;
-    char *token;
-    token = strtok(line, " ,\t[]#");
-    while (token != NULL) {
-        token = strtok(NULL, " ,\t[]#");
-        if (token == NULL) break;
-        counter++;
-    }
-    return counter;
+static int symAllocPTR(Symbols *sym){
+    int i = 0;
+    sym = (Symbols *)calloc(sizeof(Symbols), 1);
+    return RC_OK;
 }
 
-static int getLabels(FILE *amFile) {
-    Labels labels;
-    int PC = START_ADDRESS;
-    int inc;
-    char *line [MAX_LINE_LENGTH];
-    char *label_end;
-    char *label_start;
-    char str[MAX_LABEL_LENGTH];
-    int length;
+int midPassing(AST *ast){
+    AST *curr = ast;
+    AST *last_node = curr;
+    Symbols *symbols;
+
+    int IC = START_ADDRESS;
+    int DC = 0;
     int i = 0;
-    while (fgets(line, MAX_LINE_LENGTH, amFile)) {
-        inc = countLineParts(line);
-        if (!(label_end = strchr(line, ":"))) {
-             PC += inc;
-             continue;
-        }
-        label_start = line;
-        while (isspace(label_start)) label_start++;
-        length = label_end - label_start;
-        
-        strncpy(str, label_start, length);
-        labels[i].labelname[length] = "\0";
-        //ptr = strtok(line, " :,\t");
+    int line_objects_num = 0;
+    char *str;
+
+    while (last_node){ /*first pass*/
+        last_node = last_node->next;
     }
-    fseek(amFile, 0, SEEK_SET);
-    return 1;
+
+    while (curr){
+        if (curr->label_occurrence){
+            symbols->IC = IC;
+            symbols->SymContext = OCCURRENCE;
+            symbols->label = my_strdup(curr->label_occurrence, -1);
+            IC++;
+        }
+        else if (curr->cmd_type == DIRECTIVE){
+            symbols->IC = IC;
+            if (curr->command.directive.type == STRING){
+                symbols->SymContext = STRING;
+                symbols->sym_data_options.string = curr;
+            }
+            else if (curr->command.directive.type == DATA){
+                symbols->SymContext = DATA;
+                symbols->sym_data_options.data = curr;
+            }
+            else if (curr->command.directive.type == ENTRY){
+                symbols->SymContext = ENTRY;
+                symbols->label = my_strdup(curr->command.directive.directive_options.label, -1);
+            }
+            else if (curr->command.directive.type == EXTERN){
+                symbols->SymContext = EXTERN;
+                symbols->label = my_strdup(curr->command.directive.directive_options.label, -1);
+            }
+        }
+    }
+    
+    
+    while (curr){ /*second pass*/
+        switch (curr->cmd_type){
+            case INSTRUCTION:
+                /* code */
+                break;
+            case DIRECTIVE:
+                break;
+            case DEFINE:
+                break;
+            
+            default:
+                break;
+        }
+    }
+    
+    return RC_OK;
 }
