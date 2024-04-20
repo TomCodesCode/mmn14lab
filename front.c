@@ -1,13 +1,13 @@
+#include <string.h>
 #include "lib.h"
 #include "front.h"
 #include "datastruct.h"
 #include "errors.h"
-#include <string.h>
 
 int error_count = 0;
 
 static char *my_strdup(const char *src, int delta) {
-    int len = (delta > 0) ? delta + 1 : strlen(src) + 1;
+    int len = (delta > 0) ? (delta + 1) : strlen(src) + 1;
     char *dst = (char *)malloc(len);
 
     if (dst == NULL) {
@@ -331,7 +331,7 @@ AST *createNode(char *line) {
 
     if (type_enum == EMPTY) ast->cmd_type = EMPTY;
 
-    if (islabel(command_line[0]) /* && type_enum != DIRECTIVE */) { /*saving label name into the ast and deleting from the current str array*/
+    if (islabel(command_line[0])) { /*saving label name into the ast and deleting from the current str array*/
         ast->label_occurrence = my_strdup(command_line[0], -1);
         rc = deleteFirstString(command_line); /*check for error code*/
     }
@@ -351,16 +351,17 @@ AST *createNode(char *line) {
             ast->cmd_type = DIRECTIVE;
             switch (ast->command.directive.type)
             {
-            case STRING:{
+            case STRING:
                 ptr = command_line[2] + 1;
                 ast->command.directive.directive_options.string.string = my_strdup(ptr, strchr(ptr, '"') - ptr - 1); /*ignoring the "" in the string delaration*/
                 break;
-            }
-            case ENTRY || EXTERN:{
+            
+            case ENTRY:
+            case EXTERN:
                 ast->command.directive.directive_options.label = my_strdup(command_line[1], -1);
                 break;
-            }
-            case DATA:{
+            
+            case DATA:
                 i = 0;
                 ptr = command_line[1];
                 while (ptr){
@@ -377,7 +378,7 @@ AST *createNode(char *line) {
                 }
 
                 break;
-            }
+            
             default:
                 break;
             }
@@ -422,8 +423,23 @@ AST *parseAssembley (FILE *amFile) {
     return head;
 }
 
-int main(){
-    FILE *amFile = fopen("test.asm", "r");
+
+
+char *getcwd(char *buf, size_t size);
+
+int main() {
+    char cwd[128];
+    const char * filename = "test.asm";
+
+    FILE *amFile = fopen(filename, "r");
+
+    getcwd(cwd, sizeof(cwd));
+    
+    if (!amFile)
+    {
+        printf("File not found: %s in [%s]\n", filename, cwd);
+        return -1;
+    }
     parseAssembley(amFile);
     fclose(amFile);
     return 0;
