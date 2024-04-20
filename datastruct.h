@@ -93,11 +93,10 @@ typedef struct Labels {
 typedef struct Instructions {
     char *inst;
     int opcode;
-    char *src;
     char *dest;
+    char *src;
 } Instructions;
 
-Instructions inst_prop[INST_SET_SIZE] = {{"mov", 0, "0123", "123"}, {"cmp", 1, "0123", "0123"}, {"add", 2, "0123", "123"}, {"sub", 3,"0123", "123"},
-                            {"not", 4, "-", "123"}, {"clr", 5, "-", "123"}, {"lea", 6, "12", "123"}, {"inc", 7, "-", "123"},
-                            {"dec", 8, "-", "123"}, {"jmp", 9, "-", "13"}, {"bne", 10, "-", "13"}, {"red", 11, "-", "123"},
-                            {"prn", 12, "-", "0123"}, {"jsr", 13, "-", "13"}, {"rts", 14, "-", "-"}, {"hlt", 15, "-", "-"}};
+int numValidInstOperands(int inst);
+char * getInstByIdx(int idx);
+
