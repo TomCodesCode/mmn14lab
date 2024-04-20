@@ -4,8 +4,6 @@
 #include "datastruct.h"
 #include "errors.h"
 
-int error_count = 0;
-
 static char *my_strdup(const char *src, int delta) {
     int len = (delta > 0) ? (delta + 1) : strlen(src) + 1;
     char *dst = (char *)malloc(len);
@@ -30,11 +28,12 @@ static int isSkipLine(const char *line){
         return TRUE;
 
     while (line[i] != '\0') { /*Check if character is not printable (including space)*/
-        if (isprint(line[i++])) { /*Found a non-printable character*/
+        if (isprint(line[i]) && line[i] != ' ' ) { 
             return FALSE;
         }
+        i++;
     }
-    return TRUE; /*No non-printable characters found*/
+    return TRUE;
 }
 
 static int dismantleOperand(char *src, char **str) { /*separate the label and the index*/
@@ -69,14 +68,32 @@ static int islabel (char *str) {
 }
 
 static int isImmediate (char *str) {
-    if (*str == '#') {
-        if (isalnum(*(str + 1)))
-            return TRUE;
-        else if (*(str + 1) == '0')
-            return TRUE;
+    int i = 0;
+
+    if (*str != '#' || *str == 0)
+        return FALSE;
+
+    i++;
+
+    if (str[i] == '+' || str[i] == '-' || isdigit(str[i])) {
+        i++;
+        for (; str[i]; i++) {
+            if (!isdigit(str[i]))
+                return FALSE;
+        }
     }
-    return FALSE;
-}
+    else if (isalpha(str[i++])) {
+        for (; str[i]; i++) {
+            if (!isalnum(str[i]))
+                return FALSE;
+        }
+    }
+    else {
+        return FALSE;
+    }
+
+    return TRUE;
+  }
 
 static int isRegister (char *str) {
     if (str[REG_NAME_LEN])
@@ -247,7 +264,7 @@ static int determineType (char *line, t_commandLine command_line, AST *curr) {
     }
 
     for (i = 0; i < INST_SET_SIZE; i++) {
-        if (!strcmp(command_line[token_idx], inst_prop[i].inst)) {
+        if (!strcmp(command_line[token_idx], getInstByIdx(i))) {
             curr->command.instruction.inst_type = i;
             return INSTRUCTION;
         }
@@ -310,6 +327,7 @@ AST *createNode(char *line) {
     int type_enum;
     int op_type = 0;
     int i = 0;
+    int num_of_operands = 0;
     int rc;
     AST *ast = (AST *)calloc(sizeof(AST), 1);
     if (ast == NULL) {
@@ -327,7 +345,10 @@ AST *createNode(char *line) {
 
     type_enum = determineType(line, command_line, ast);
 
-    if (type_enum == EMPTY) ast->cmd_type = EMPTY;
+    if (type_enum == EMPTY) {
+        ast->cmd_type = EMPTY;
+        return ast;
+    }
 
     if (islabel(command_line[0])) { /*saving label name into the ast and deleting from the current str array*/
         ast->label_occurrence = my_strdup(command_line[0], -1);
@@ -337,7 +358,10 @@ AST *createNode(char *line) {
     switch (type_enum) {
         case INSTRUCTION: {
             ast->cmd_type = INSTRUCTION;
-            for (i = 0; i < 2; i++){
+
+            num_of_operands = numValidInstOperands(ast->command.instruction.inst_type);
+
+            for (i = 0; i < num_of_operands; i++) {
                 rc = instOperatorPush(ast, command_line, i, type_enum, op_type);
                 if (rc != RC_OK)
                    PRINT_ERROR_MSG(RC_E_FAILED_RETRIEVE_OPERANDS);
@@ -350,8 +374,8 @@ AST *createNode(char *line) {
             switch (ast->command.directive.type)
             {
             case STRING:
-                ptr = command_line[2] + 1;
-                ast->command.directive.directive_options.string.string = my_strdup(ptr, strchr(ptr, '"') - ptr - 1); /*ignoring the "" in the string delaration*/
+                ptr = command_line[1] + 1;
+                ast->command.directive.directive_options.string.string = my_strdup(ptr, strchr(ptr, '"') - ptr); /*ignoring the "" in the string delaration*/
                 break;
             
             case ENTRY:
@@ -392,7 +416,6 @@ AST *createNode(char *line) {
             break;
     }
 
-    error_count = 0;
     return ast;
 }
 
@@ -425,17 +448,21 @@ AST *parseAssembley (FILE *amFile) {
 
 char *getcwd(char *buf, size_t size);
 
-int main() {
+int main(int argc, char *argv[]) {
     char cwd[128];
-    const char * filename = "test.asm";
+    FILE *amFile = NULL;
+    char * filename = "test.asm";
 
-    FILE *amFile = fopen(filename, "r");
+    if (argc > 1)
+        filename = argv[1];
+
+    amFile = fopen(filename, "r");
 
     getcwd(cwd, sizeof(cwd));
     
     if (!amFile)
     {
-        printf("File not found: %s in [%s]\n", filename, cwd);
+        printf("File not found: No '%s' in [%s]\n", filename, cwd);
         return -1;
     }
     parseAssembley(amFile);
