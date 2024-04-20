@@ -284,7 +284,11 @@ static int instOperatorPush(AST *ast, char **command_line, int operand_idx, int 
     ast->command.instruction.operands[operand_idx].type = op_type;
     switch (op_type) {
         case IMMEDIATE: {
-            ast->command.instruction.operands[operand_idx].operand_select.immediate = atoi(command_line[1 + operand_idx] + 1);
+            if (atoi(command_line[1 + operand_idx] + 1) || (*(command_line[1 + operand_idx] + 1) == '0')) { /*check if the immediate is a number or label type*/
+                ast->command.instruction.operands[operand_idx].operand_select.immediate = atoi(command_line[1 + operand_idx] + 1);
+            }else{
+                ast->command.instruction.operands[operand_idx].operand_select.label = my_strdup(command_line[1 + operand_idx], -1);
+            }
             break;
         }
         case DIRECT: {
@@ -388,8 +392,8 @@ AST *createNode(char *line) {
                 ptr = command_line[1];
                 while (ptr){
                     if (isprint(*ptr)){
-                        if (!strtol(ptr, &endptr, 10)){
-                            ast->command.directive.directive_options.data[i].data_options.number = (int)strtol(ptr,&endptr,10);
+                        if (strtol(ptr, &endptr, 10) || *ptr == '0'){
+                            ast->command.directive.directive_options.data[i].data_options.number = (int)strtol(ptr, &endptr, 10);
                         }else{
                             ast->command.directive.directive_options.data[i].data_options.label = my_strdup(ptr, -1);
                         }
