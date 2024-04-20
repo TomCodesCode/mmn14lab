@@ -42,6 +42,8 @@ enum DirectiveType {
 
 struct DataDirective {
     char *label;
+    int IC;
+    int DC;
     union {
         int number;
         char *label;
@@ -51,6 +53,8 @@ struct DataDirective {
 struct String {
     char *label;
     char *string;
+    int IC;
+    int DC;
 };
 
 
@@ -64,7 +68,6 @@ struct Directive {
 };
 
 typedef struct AST {
-    char *errors[20];
     char *label_occurrence;
     enum {
         INSTRUCTION, DIRECTIVE, DEFINE, EMPTY
@@ -85,10 +88,21 @@ typedef struct AST {
 
 } AST;
 
-typedef struct Labels {
-    char label_name [MAX_TOKEN_LENGTH];
-    int label_adress;
-}Labels;
+
+enum SymbolContext{
+    OCCURRENCE, STRING, DATA, ENTRY, EXTERN
+};
+
+typedef struct Symbols{ /*MODIFY TOMORROW*/
+    char *label;
+    int IC;
+    enum SymbolContext SymContext;
+    union{
+        AST *string;
+        AST *data; /*will point to the ast node that contains the data/string*/
+    }sym_data_options;
+
+}Symbols;
 
 typedef struct Instructions {
     char *inst;
