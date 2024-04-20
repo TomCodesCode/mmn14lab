@@ -52,8 +52,8 @@ static int dismantleOperand(char *src, char **str) { /*separate the label and th
     ptr1 = strchr(src, '[');
     ptr2 = strchr(src, ']');
 
-    strncpy(str[0], src, ptr1 - src - 1);
-    str[0][ptr1 - src - 1] = '\0';
+    strncpy(str[0], src, ptr1 - src);
+    str[0][ptr1 - src] = '\0';
     strncpy(str[1], ptr1 + 1, ptr2 - ptr1 - 1);
     str[1][ptr2 - ptr1 - 1] = '\0';
 
@@ -266,7 +266,7 @@ static int instOperatorPush(AST *ast, char **command_line, int operand_idx, int 
     if (rc != RC_OK)
         return rc;
 
-    ast->command.instruction.operands[0].type = op_type;
+    ast->command.instruction.operands[operand_idx].type = op_type;
     switch (op_type) {
         case IMMEDIATE: {
             ast->command.instruction.operands[operand_idx].operand_select.immediate = atoi(command_line[1 + operand_idx] + 1);
