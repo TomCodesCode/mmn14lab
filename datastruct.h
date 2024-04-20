@@ -1,6 +1,8 @@
 #include "globals.h"
 #include <stdio.h>
 
+#define NUM_OF_OPERANDS 2
+
 /*Define enums for instruction types and operand types*/
 enum InstructionType {
     MOV, CMP, ADD, SUB, NOT, CLR, LEA, INC, DEC, JMP, BNE, RED, PRN, JSR, RTS, HLT
@@ -73,7 +75,7 @@ typedef struct AST {
 
         struct {
             enum InstructionType inst_type;
-            struct Operand operands[2];
+            struct Operand operands[NUM_OF_OPERANDS];
         } instruction;
 
         struct Directive directive;

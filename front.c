@@ -37,7 +37,7 @@ static int isSkipLine(const char *line){
     return TRUE; /*No non-printable characters found*/
 }
 
-static char ** dismantleOperand(char *src, char **str) { /*separate the label and the index*/
+static int dismantleOperand(char *src, char **str) { /*separate the label and the index*/
     char *ptr1;
     char *ptr2;
 
@@ -57,7 +57,7 @@ static char ** dismantleOperand(char *src, char **str) { /*separate the label an
     strncpy(str[1], ptr1 + 1, ptr2 - ptr1 - 1);
     str[1][ptr2 - ptr1 - 1] = '\0';
 
-    return str;
+    return RC_OK;
 }
 
 static int islabel (char *str) {
@@ -105,25 +105,20 @@ static int isDirect(char *str) {
 static int isIndexNum (char *str) {
     char *ptr1 = strchr(str, '[');
     char *ptr2 = strchr(str, ']');
-    if ((ptr1 > str) && ptr1 && ptr2) {
-        ptr1++;
-        if (atoi(ptr1))
-            return TRUE;
+    if (ptr1 && ptr2 && (ptr1 > str) && (isdigit(*(ptr1 + 1))) && *(ptr2+1) == 0) {
+        return TRUE;
     }
+
     return FALSE;
 }
 
 static int isIndexLabel (char *str) {
-    int i = 0;
     char *ptr1 = strchr(str, '[');
     char *ptr2 = strchr(str, ']');
-    if (ptr1 && ptr2 && (ptr1 > str) && (isalpha(*(ptr1 + 1)))) {
-        while (isalnum(*(ptr1 + i))){
-            i++;
-            if (ptr1 + i == ptr2)
-                return TRUE;
-        }
+    if (ptr1 && ptr2 && (ptr1 > str) && (isalpha(*(ptr1 + 1))) && *(ptr2+1) == 0) {
+        return TRUE;
     }
+
     return FALSE;
 }
 
@@ -264,7 +259,7 @@ static int determineType (char *line, t_commandLine command_line, AST *curr) {
 }
 
 static int instOperatorPush(AST *ast, char **command_line, int operand_idx, int opTypeEnum, int op_type) {
-    char **str = NULL;
+    char *str[NUM_OF_OPERANDS];
     int rc;
 
     rc = getOperandType(command_line[1 + operand_idx], &op_type);
@@ -282,17 +277,21 @@ static int instOperatorPush(AST *ast, char **command_line, int operand_idx, int 
             break;
         }
         case INDEX_NUM: {
-            str = dismantleOperand(command_line[1 + operand_idx], str); /*separate the operand and the index*/
+            rc = dismantleOperand(command_line[1 + operand_idx], str); /*separate the operand and the index*/
+            if (rc != RC_OK) break;
             ast->command.instruction.operands[operand_idx].operand_select.index_op.label1 = my_strdup(str[0], -1);
             ast->command.instruction.operands[operand_idx].operand_select.index_op.index_select.number = atoi(str[1]);
-            free(str);
+            free(str[0]);
+            free(str[1]);
             break;
         }
         case INDEX_LABEL: {
-            str = dismantleOperand(command_line[1 + operand_idx], str); /*separate the operand and the index*/
+            rc = dismantleOperand(command_line[1 + operand_idx], str); /*separate the operand and the index*/
+            if (rc != RC_OK) break;
             ast->command.instruction.operands[operand_idx].operand_select.index_op.label1 = my_strdup(str[0], -1);
             ast->command.instruction.operands[operand_idx].operand_select.index_op.index_select.label2 = my_strdup(str[1], -1);
-            free(str);
+            free(str[0]);
+            free(str[1]);
             break;
         }
         case REGISTER: {
