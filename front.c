@@ -4,7 +4,7 @@
 #include "datastruct.h"
 #include "errors.h"
 
-static char *my_strdup(const char *src, int delta) {
+char *my_strdup(const char *src, int delta) {
     int len = (delta > 0) ? (delta + 1) : strlen(src) + 1;
     char *dst = (char *)malloc(len);
 
