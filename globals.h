@@ -4,6 +4,6 @@
 #define ARE_BITS 2
 #define MAX_LABELS 100
 #define START_ADDRESS 100
-#define MAX_COMMAND_SIZE 6
+#define MAX_COMMAND_SIZE 10
 #define INST_SET_SIZE 16
 #define REG_NAME_LEN 2
