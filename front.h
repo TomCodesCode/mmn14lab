@@ -1,7 +1,15 @@
 #include "globals.h"
 typedef char * t_commandLine[MAX_COMMAND_SIZE];
 
+typedef struct Defines{
+    char *label;
+    int number;
+}Defines;
+
+
 char *my_strdup(const char *src, int delta);
+
+
 /*
 
 typedef struct AST {

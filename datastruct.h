@@ -67,8 +67,13 @@ struct Directive {
     } directive_options;
 };
 
+typedef struct Opcode {
+    unsigned short op : 14;
+}Opcode;
+
 typedef struct AST {
     char *label_occurrence;
+    Opcode opcode[MAX_COMMAND_SIZE];
     enum {
         INSTRUCTION, DIRECTIVE, DEFINE, EMPTY
     } cmd_type;
@@ -90,17 +95,14 @@ typedef struct AST {
 
 
 enum SymbolContext{
-    OCCURRENCE, STRING, DATA, ENTRY, EXTERN
+    OCCURRENCEsym, STRINGsym, DATAsym, ENTRYsym, EXTERNsym, DEFINEsym
 };
 
 typedef struct Symbols{ /*MODIFY TOMORROW*/
     char *label;
     int IC;
     enum SymbolContext SymContext;
-    union{
-        AST *string;
-        AST *data; /*will point to the ast node that contains the data/string*/
-    }sym_data_options;
+    AST *sym_to_ast;
 
 }Symbols;
 

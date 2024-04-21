@@ -29,26 +29,26 @@ int midPassing(AST *ast){
     while (curr){
         if (curr->label_occurrence){
             symbols->IC = IC;
-            symbols->SymContext = OCCURRENCE;
+            symbols->SymContext = OCCURRENCEsym;
             symbols->label = my_strdup(curr->label_occurrence, -1);
             IC++;
         }
         else if (curr->cmd_type == DIRECTIVE){
             symbols->IC = IC;
-            if (curr->command.directive.type == STRING){
-                symbols->SymContext = STRING;
+            if (curr->command.directive.type == STRINGsym){
+                symbols->SymContext = STRINGsym;
                 symbols->sym_data_options.string = curr;
             }
-            else if (curr->command.directive.type == DATA){
-                symbols->SymContext = DATA;
+            else if (curr->command.directive.type == DATAsym){
+                symbols->SymContext = DATAsym;
                 symbols->sym_data_options.data = curr;
             }
-            else if (curr->command.directive.type == ENTRY){
-                symbols->SymContext = ENTRY;
+            else if (curr->command.directive.type == ENTRYsym){
+                symbols->SymContext = ENTRYsym;
                 symbols->label = my_strdup(curr->command.directive.directive_options.label, -1);
             }
-            else if (curr->command.directive.type == EXTERN){
-                symbols->SymContext = EXTERN;
+            else if (curr->command.directive.type == EXTERNsym){
+                symbols->SymContext = EXTERNsym;
                 symbols->label = my_strdup(curr->command.directive.directive_options.label, -1);
             }
         }

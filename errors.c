@@ -7,5 +7,7 @@ const char *errorMsg[] = {
     /*RC_INVALID_TYPE*/                 "invalid type",
     /*RC_E_INVALID_CMD */               "failed to parse command line",
     /*RC_E_FAILED_RETRIEVE_OPERANDS */  "failed to retrieve operands from command line",
+    /*RC_E_RUNTIME_FAIL*/               "calculation failed"
+    /*RC_E_MUL_LABEL_DEF*/              "label declaration repeated. exiting."
     /*last*/                            ""
 };

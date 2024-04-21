@@ -1,7 +1,12 @@
 #define MAX_LINE_LENGTH 81
 #define MAX_TOKEN_LENGTH 31
 #define OPCODE_COUNT 16
+#define UNUSED_BITS 4
+#define OPCODE_BITS 4
+#define SRC_BITS 2
+#define DST_BITS 2
 #define ARE_BITS 2
+#define TOTAL_BITS 14
 #define MAX_LABELS 100
 #define START_ADDRESS 100
 #define MAX_COMMAND_SIZE 10
