@@ -84,6 +84,7 @@ typedef struct AST {
         struct {
             enum InstructionType inst_type;
             struct Operand operands[NUM_OF_OPERANDS];
+            int line_size;
         } instruction;
 
         struct Directive directive;
@@ -95,7 +96,7 @@ typedef struct AST {
 
 
 enum SymbolContext{
-    OCCURRENCEsym, STRINGsym, DATAsym, ENTRYsym, EXTERNsym, DEFINEsym
+    OCCURRENCEsym, DIRECTIVEsym
 };
 
 typedef struct Symbols{ /*MODIFY TOMORROW*/
