@@ -2,7 +2,7 @@ CC=gcc
 DEBUG=-g -O0
 CFLAGS=-I. $(DEBUG) -Wall -Werror -pedantic -ansi
 DEPS:= $(wildcard *.h)
-CFILES = front.c errors.c datastruct.c
+CFILES = mmn14lab.c front.c errors.c datastruct.c middle.c
 
 mmn14lab: $(CFILES) $(DEPS)
 	$(CC) -o $@ $(CFILES) $(CFLAGS)

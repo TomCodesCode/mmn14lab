@@ -1,7 +1,11 @@
-#include "globals.h"
-#include <stdio.h>
+#include "lib.h"
 
 #define NUM_OF_OPERANDS 2
+
+typedef struct Opcodes{
+    unsigned int opcode : 14;
+    char * symbol;
+} Opcodes;
 
 /*Define enums for instruction types and operand types*/
 enum InstructionType {
@@ -42,8 +46,6 @@ enum DirectiveType {
 
 struct DataDirective {
     char *label;
-    int IC;
-    int DC;
     union {
         int number;
         char *label;
@@ -53,8 +55,6 @@ struct DataDirective {
 struct String {
     char *label;
     char *string;
-    int IC;
-    int DC;
 };
 
 
@@ -67,12 +67,13 @@ struct Directive {
     } directive_options;
 };
 
+enum cmd_type {
+    INSTRUCTION, DIRECTIVE, DEFINE, EMPTY
+};
+
 typedef struct AST {
     char *label_occurrence;
-    enum {
-        INSTRUCTION, DIRECTIVE, DEFINE, EMPTY
-    } cmd_type;
-
+    enum cmd_type cmd_type;
     union {
         struct Define define;
 
@@ -88,21 +89,19 @@ typedef struct AST {
 
 } AST;
 
-
-enum SymbolContext{
-    OCCURRENCE, STRING, DATA, ENTRY, EXTERN
+enum SymbolContext {
+    CODEsym, STRINGsym, DATAsym, ENTRYsym, EXTERNsym, DEFINEsym
 };
 
-typedef struct Symbols{ /*MODIFY TOMORROW*/
+typedef struct Symbols {
     char *label;
-    int IC;
     enum SymbolContext SymContext;
-    union{
-        AST *string;
-        AST *data; /*will point to the ast node that contains the data/string*/
-    }sym_data_options;
+    int value;
+} SymbolsTbl;
 
-}Symbols;
+enum WordType {
+    ARE, OPERAND_1_TYPE, OPERAND_2_TYPE, INSTTYPE, VALUE
+};
 
 typedef struct Instructions {
     char *inst;
@@ -110,7 +109,4 @@ typedef struct Instructions {
     char *dest;
     char *src;
 } Instructions;
-
-int numValidInstOperands(int inst);
-char * getInstByIdx(int idx);
 

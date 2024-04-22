@@ -1,8 +1,5 @@
-#include <string.h>
 #include "lib.h"
-#include "front.h"
-#include "datastruct.h"
-#include "errors.h"
+
 
 char *my_strdup(const char *src, int delta) {
     int len = (delta > 0) ? (delta + 1) : strlen(src) + 1;
@@ -171,7 +168,6 @@ static int getOperandType (char *str, int * operand_type) {
 
 static int parseLine (char *line, t_commandLine arr) {                 /*get a line, dismantle it into its properties*/
     char *token;
-    /*char line_cpy [MAX_LINE_LENGTH];*/
     char *line_cpy;
     char *token_delim = " =,\t\n\r";
     int i = 0;
@@ -187,22 +183,6 @@ static int parseLine (char *line, t_commandLine arr) {                 /*get a l
 
     token = strtok(line_cpy, token_delim);
     while (token != NULL) {
-        /*
-        ptr = token;
-        token = strtok(NULL, " =,\t\n\r");
-        endptr = ptr + 1;
-        while(*endptr == ' ' || *endptr == '=' || *endptr == ',' || *endptr == '\t') endptr--;
-        if (token == NULL) {
-            if (strlen(ptr) > MAX_TOKEN_LENGTH) {
-                return -1;
-            }
-            strcpy(arr[i], ptr);
-            break;
-        }
-        if ((endptr - ptr) > MAX_TOKEN_LENGTH) {
-            return -1;
-        }
-        */
         if (strlen(token) > MAX_TOKEN_LENGTH) {
             /* token is too long */
             return -1;
@@ -273,7 +253,8 @@ static int determineType (char *line, t_commandLine command_line, AST *curr) {
     return EMPTY;
 }
 
-static int instOperatorPush(AST *ast, char **command_line, int operand_idx, int opTypeEnum, int op_type) {
+static int instOperatorPush(AST *ast, char **command_line, int operand_idx, int opTypeEnum) {
+    int op_type;
     char *str[NUM_OF_OPERANDS];
     int rc;
 
@@ -289,10 +270,12 @@ static int instOperatorPush(AST *ast, char **command_line, int operand_idx, int 
             }else{
                 ast->command.instruction.operands[operand_idx].operand_select.label = my_strdup(command_line[1 + operand_idx], -1);
             }
+            IC++;
             break;
         }
         case DIRECT: {
             ast->command.instruction.operands[operand_idx].operand_select.label = my_strdup(command_line[1 + operand_idx], -1);
+            IC++;
             break;
         }
         case INDEX_NUM: {
@@ -300,6 +283,7 @@ static int instOperatorPush(AST *ast, char **command_line, int operand_idx, int 
             if (rc != RC_OK) break;
             ast->command.instruction.operands[operand_idx].operand_select.index_op.label1 = my_strdup(str[0], -1);
             ast->command.instruction.operands[operand_idx].operand_select.index_op.index_select.number = atoi(str[1]);
+            IC+=2;
             free(str[0]);
             free(str[1]);
             break;
@@ -309,16 +293,27 @@ static int instOperatorPush(AST *ast, char **command_line, int operand_idx, int 
             if (rc != RC_OK) break;
             ast->command.instruction.operands[operand_idx].operand_select.index_op.label1 = my_strdup(str[0], -1);
             ast->command.instruction.operands[operand_idx].operand_select.index_op.index_select.label2 = my_strdup(str[1], -1);
+            IC+=2;
             free(str[0]);
             free(str[1]);
             break;
         }
         case REGISTER: {
             ast->command.instruction.operands[operand_idx].operand_select.reg = atoi(command_line[1 + operand_idx] + 1);
+            if (operand_idx == 0)
+                IC++;
+            else if (operand_idx == 1) {
+                if (ast->command.instruction.operands[0].type != REGISTER)
+                    IC++;
+            }
             break;
         }
         default:
             break;
+    }
+    if (rc != RC_OK){
+        PRINT_ERROR_MSG(rc);
+        return rc;
     }
 
     return RC_OK;
@@ -329,18 +324,18 @@ AST *createNode(char *line) {
     char *ptr;
     char *endptr;
     int type_enum;
-    int op_type = 0;
     int i = 0;
     int num_of_operands = 0;
     int rc;
-    AST *ast = (AST *)calloc(sizeof(AST), 1);
+    AST *ast;
+    
+    ast = (AST *)calloc(sizeof(AST), 1);
     if (ast == NULL) {
         perror("Memory allocation failed (front->createNode)");
         exit(EXIT_FAILURE);
     }
 
     rc = parseLine(line, command_line); /*check for error code*/
-
     if (rc != RC_OK) {
         free(ast);
         PRINT_ERROR_MSG(RC_E_INVALID_CMD);
@@ -359,22 +354,22 @@ AST *createNode(char *line) {
         rc = deleteFirstString(command_line); /*check for error code*/
     }
 
+    ast->cmd_type = type_enum;
+
     switch (type_enum) {
         case INSTRUCTION: {
-            ast->cmd_type = INSTRUCTION;
-
             num_of_operands = numValidInstOperands(ast->command.instruction.inst_type);
 
             for (i = 0; i < num_of_operands; i++) {
-                rc = instOperatorPush(ast, command_line, i, type_enum, op_type);
+                rc = instOperatorPush(ast, command_line, i, type_enum);
                 if (rc != RC_OK)
                    PRINT_ERROR_MSG(RC_E_FAILED_RETRIEVE_OPERANDS);
             }
+            IC++;
 
             break;
         }
         case DIRECTIVE: {
-            ast->cmd_type = DIRECTIVE;
             switch (ast->command.directive.type)
             {
             case STRING:
@@ -412,7 +407,6 @@ AST *createNode(char *line) {
             break;
         }
         case DEFINE:{
-            ast->cmd_type = DEFINE;
             ast->command.define.label = my_strdup(command_line[1], -1);
             ast->command.define.number = atoi(command_line[2]);
         }
@@ -423,53 +417,84 @@ AST *createNode(char *line) {
     return ast;
 }
 
-AST *parseAssembley (FILE *amFile) {
-    AST *head = NULL;
-    AST *current = NULL;
+int parseAssembley (FILE *amFile, AST ** code_ast, AST ** data_ast) {
+    AST *data_head = NULL;
+    AST *data_current = NULL;
+    AST *code_head = NULL;
+    AST *code_current = NULL;
     AST *newnode = NULL;
     char line [MAX_LINE_LENGTH];
+    int cmd_type = 0;
+
+    *code_ast = NULL;
+    *data_ast = NULL;
 
     while (fgets(line, MAX_LINE_LENGTH, amFile)) {
+        int cmd_ic = IC;
         newnode = createNode(line);
 
         if (!newnode)
-            return NULL;
+        {
+            PRINT_ERROR_MSG(RC_E_ALLOC_FAILED);
+            return RC_E_ALLOC_FAILED;
+        }
 
         if (newnode->cmd_type == EMPTY) continue;
 
-        if (!head)
-            head = newnode;
-        else
-            current->next = newnode;
+        switch (newnode->cmd_type){
+            case INSTRUCTION:
+                if (newnode->label_occurrence)
+                    addSymbolVal(newnode->label_occurrence, CODEsym, cmd_ic);
+                
+                if (!code_head)
+                    code_head = newnode;
+                else
+                    code_current->next = newnode;
+                
+                code_current = newnode;
+                break;
+            
+            case DIRECTIVE:
+                cmd_type = newnode->command.directive.type;
+                if (cmd_type == STRING)
+                    addSymbolVal(newnode->command.directive.directive_options.label, STRINGsym, 00000000000);
+                else if (cmd_type == ENTRY || cmd_type == EXTERN){
+                    if (cmd_type == ENTRY)
+                        addSymbolVal(newnode->command.directive.directive_options.label, ENTRYsym, 00000000000);
+                    else
+                        addSymbolVal(newnode->command.directive.directive_options.label, EXTERNsym, 00000000000);
+                }
+                else if (cmd_type == DATA){
+                    addSymbolVal(newnode->command.directive.directive_options.label, DATAsym, 00000000000);
+                }
 
-        current = newnode;
+                if (!data_head)
+                    data_head = newnode;
+                else
+                    data_current->next = newnode;
+                
+                data_current = newnode;
+                break;
+            
+            case DEFINE:
+                addSymbolVal(newnode->command.define.label, DEFINEsym, newnode->command.define.number);
+                
+                if (!data_head)
+                    data_head = newnode;
+                else
+                    data_current->next = newnode;
+                
+                data_current = newnode;
+                break;
+
+            default:
+                break;
+        }
     }
 
-    return head;
+    *code_ast = code_head;
+    *data_ast = data_head;
+
+    return RC_OK;
 }
 
-
-
-char *getcwd(char *buf, size_t size);
-
-int main(int argc, char *argv[]) {
-    char cwd[128];
-    FILE *amFile = NULL;
-    char * filename = "test.asm";
-
-    if (argc > 1)
-        filename = argv[1];
-
-    amFile = fopen(filename, "r");
-
-    getcwd(cwd, sizeof(cwd));
-    
-    if (!amFile)
-    {
-        printf("File not found: No '%s' in [%s]\n", filename, cwd);
-        return -1;
-    }
-    parseAssembley(amFile);
-    fclose(amFile);
-    return 0;
-}
