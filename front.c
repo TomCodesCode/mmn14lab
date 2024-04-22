@@ -1,11 +1,5 @@
-#include <string.h>
 #include "lib.h"
-#include "datastruct.h"
-#include "front.h"
-#include "errors.h"
 
-int IC = START_ADDRESS;
-int DC = 0;
 
 char *my_strdup(const char *src, int delta) {
     int len = (delta > 0) ? (delta + 1) : strlen(src) + 1;
@@ -276,10 +270,12 @@ static int instOperatorPush(AST *ast, char **command_line, int operand_idx, int 
             }else{
                 ast->command.instruction.operands[operand_idx].operand_select.label = my_strdup(command_line[1 + operand_idx], -1);
             }
+            IC++;
             break;
         }
         case DIRECT: {
             ast->command.instruction.operands[operand_idx].operand_select.label = my_strdup(command_line[1 + operand_idx], -1);
+            IC++;
             break;
         }
         case INDEX_NUM: {
@@ -287,6 +283,7 @@ static int instOperatorPush(AST *ast, char **command_line, int operand_idx, int 
             if (rc != RC_OK) break;
             ast->command.instruction.operands[operand_idx].operand_select.index_op.label1 = my_strdup(str[0], -1);
             ast->command.instruction.operands[operand_idx].operand_select.index_op.index_select.number = atoi(str[1]);
+            IC+=2;
             free(str[0]);
             free(str[1]);
             break;
@@ -296,12 +293,19 @@ static int instOperatorPush(AST *ast, char **command_line, int operand_idx, int 
             if (rc != RC_OK) break;
             ast->command.instruction.operands[operand_idx].operand_select.index_op.label1 = my_strdup(str[0], -1);
             ast->command.instruction.operands[operand_idx].operand_select.index_op.index_select.label2 = my_strdup(str[1], -1);
+            IC+=2;
             free(str[0]);
             free(str[1]);
             break;
         }
         case REGISTER: {
             ast->command.instruction.operands[operand_idx].operand_select.reg = atoi(command_line[1 + operand_idx] + 1);
+            if (operand_idx == 0)
+                IC++;
+            else if (operand_idx == 1) {
+                if (ast->command.instruction.operands[0].type != REGISTER)
+                    IC++;
+            }
             break;
         }
         default:
@@ -361,6 +365,7 @@ AST *createNode(char *line) {
                 if (rc != RC_OK)
                    PRINT_ERROR_MSG(RC_E_FAILED_RETRIEVE_OPERANDS);
             }
+            IC++;
 
             break;
         }

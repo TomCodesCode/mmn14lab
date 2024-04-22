@@ -1,8 +1,8 @@
-#include <string.h>
 #include "lib.h"
-#include "datastruct.h"
-#include "front.h"
-#include "errors.h"
+
+
+int IC = START_ADDRESS;
+int DC = 0;
 
 char *getcwd(char *buf, size_t size);
 
@@ -12,6 +12,7 @@ int main(int argc, char *argv[]){
     char * filename = "test.asm";
     AST * code_ast;
     AST * data_ast;
+    int rc;
 
     if (argc > 1)
         filename = argv[1];
@@ -25,7 +26,13 @@ int main(int argc, char *argv[]){
         printf("File not found: No '%s' in [%s]\n", filename, cwd);
         return -1;
     }
-    parseAssembley(amFile, &code_ast, &data_ast);
+    
+    rc = parseAssembley(amFile, &code_ast, &data_ast);
+    if (rc != RC_OK) 
+        exit (rc);
+
+    midPassing(code_ast);
+    midPassing(data_ast);
 
     dumpSymbolTbl();
 

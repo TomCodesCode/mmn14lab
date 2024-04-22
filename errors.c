@@ -11,5 +11,6 @@ const char *errorMsg[] = {
     /*RC_E_FAILED_RETRIEVE_OPERANDS */  "failed to retrieve operands from command line",
     /*RC_E_UNINITIALIZED_SYM_TBL*/      "uninitialized symbol table",
     /*RC_E_DUPLICATED_SYMBOL*/          "redefinition of symbol or lable",
+    /*RC_E_NO_AST_TABLE*/               "no AST provided, or empty",
     /*last*/                            ""
 };

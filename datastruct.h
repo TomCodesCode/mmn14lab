@@ -1,5 +1,4 @@
-#include "globals.h"
-#include <stdio.h>
+#include "lib.h"
 
 #define NUM_OF_OPERANDS 2
 
@@ -111,11 +110,3 @@ typedef struct Instructions {
     char *src;
 } Instructions;
 
-int numValidInstOperands(int inst);
-char * getInstByIdx(int idx);
-SymbolsTbl * getSymbolsTbl(void);
-int addSymbolVal(char * symbol, int symbol_type, int value);
-int getSymbolVal(const char * symbol, int * value);
-int dumpSymbolTbl(void);
-int calcOpcodePart(Opcodes * opcode, int wordtype, int num, int in_line_part);
-int opcodePerOperand(AST *ast, int num, int in_line_part, int operand_idx);
