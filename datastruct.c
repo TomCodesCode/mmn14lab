@@ -1,6 +1,5 @@
 #include "lib.h"
-#include "datastruct.h"
-#include "errors.h"
+
 
 Instructions inst_prop[INST_SET_SIZE] = {
     {"mov",	0,	"123",	"0123"},
