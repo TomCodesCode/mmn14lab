@@ -12,6 +12,8 @@ int main(int argc, char *argv[]){
     char * filename = "test.asm";
     AST * code_ast;
     AST * data_ast;
+    /*Opcodes * code_opcode_tbl;
+    Opcodes * data_opcode_tbl;*/
     int rc;
 
     if (argc > 1)
@@ -31,7 +33,12 @@ int main(int argc, char *argv[]){
     if (rc != RC_OK) 
         exit (rc);
 
+    dumpSymbolTbl();
+
     midPassing(code_ast);
+
+    dumpSymbolTbl();
+
     midPassing(data_ast);
 
     dumpSymbolTbl();
