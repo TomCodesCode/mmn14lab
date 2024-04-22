@@ -18,6 +18,7 @@ int midPassing(AST *ast) {
             default:
                 break;
         }
+        cur_ast = cur_ast->next;
     }
     
     return RC_OK;

@@ -430,6 +430,7 @@ int parseAssembley (FILE *amFile, AST ** code_ast, AST ** data_ast) {
     *data_ast = NULL;
 
     while (fgets(line, MAX_LINE_LENGTH, amFile)) {
+        int cmd_ic = IC;
         newnode = createNode(line);
 
         if (!newnode)
@@ -443,7 +444,7 @@ int parseAssembley (FILE *amFile, AST ** code_ast, AST ** data_ast) {
         switch (newnode->cmd_type){
             case INSTRUCTION:
                 if (newnode->label_occurrence)
-                    addSymbolVal(newnode->label_occurrence, CODEsym, IC);
+                    addSymbolVal(newnode->label_occurrence, CODEsym, cmd_ic);
                 
                 if (!code_head)
                     code_head = newnode;
