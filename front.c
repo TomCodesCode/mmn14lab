@@ -1,7 +1,7 @@
 #include <string.h>
 #include "lib.h"
-#include "front.h"
 #include "datastruct.h"
+#include "front.h"
 #include "errors.h"
 
 int IC = START_ADDRESS;
@@ -412,8 +412,7 @@ AST *createNode(char *line) {
     return ast;
 }
 
-AST *parseAssembley (FILE *amFile) {
-    int rc = RC_OK;
+int parseAssembley (FILE *amFile, AST ** code_ast, AST ** data_ast) {
     AST *data_head = NULL;
     AST *data_current = NULL;
     AST *code_head = NULL;
@@ -422,11 +421,17 @@ AST *parseAssembley (FILE *amFile) {
     char line [MAX_LINE_LENGTH];
     int cmd_type = 0;
 
+    *code_ast = NULL;
+    *data_ast = NULL;
+
     while (fgets(line, MAX_LINE_LENGTH, amFile)) {
         newnode = createNode(line);
 
         if (!newnode)
-            return NULL;
+        {
+            PRINT_ERROR_MSG(RC_E_ALLOC_FAILED);
+            return RC_E_ALLOC_FAILED;
+        }
 
         if (newnode->cmd_type == EMPTY) continue;
 
@@ -481,10 +486,9 @@ AST *parseAssembley (FILE *amFile) {
         }
     }
 
-    if (rc) {
-        PRINT_ERROR_MSG(rc);
-        exit(rc);
-    }
-    return code_head;
+    *code_ast = code_head;
+    *data_ast = data_head;
+
+    return RC_OK;
 }
 
