@@ -156,19 +156,14 @@ static int deleteFirstString(t_commandLine str) {
 static int getOperandType (char *str, int * operand_type) {
     if (isImmediate(str))
         *operand_type = IMMEDIATE;
-        //rc = opcodePerOperand(ast, IMMEDIATE, operand_idx + 1, operand_idx); /*setting opcode (of instruction) to operand field in instruction line*/
     else if (isDirect(str))
         *operand_type = DIRECT;
-        //rc = opcodePerOperand(ast, IMMEDIATE, operand_idx + 1, operand_idx); /*setting opcode (of instruction) to operand field in instruction line*/
     else if (isIndexNum(str))
         *operand_type = INDEX_NUM;
-        //rc = opcodePerOperand(ast, IMMEDIATE, operand_idx + 1, operand_idx); /*setting opcode (of instruction) to operand field in instruction line*/
     else if (isIndexLabel(str))
         *operand_type = INDEX_LABEL;
-        //rc = opcodePerOperand(ast, IMMEDIATE, operand_idx + 1, operand_idx); /*setting opcode (of instruction) to operand field in instruction line*/
     else if (isRegister(str))
         *operand_type = REGISTER;
-        //rc = opcodePerOperand(ast, IMMEDIATE, operand_idx + 1, operand_idx); /*setting opcode (of instruction) to operand field in instruction line*/
     else {
         PRINT_ERROR_MSG(RC_E_INVALID_OPERAND);
         return RC_E_INVALID_OPERAND;
@@ -257,7 +252,6 @@ static int determineType (char *line, t_commandLine command_line, AST *curr) {
     for (i = 0; i < INST_SET_SIZE; i++) {
         if (!strcmp(command_line[token_idx], getInstByIdx(i))) {
             curr->command.instruction.inst_type = i;
-            //rc = opcodePerOperand(ast, IMMEDIATE, operand_idx + 1, operand_idx); /*setting opcode (of instruction) to operand field in instruction line*/
             return INSTRUCTION;
         }
     }
@@ -265,7 +259,8 @@ static int determineType (char *line, t_commandLine command_line, AST *curr) {
     return EMPTY;
 }
 
-static int instOperatorPush(AST *ast, char **command_line, int operand_idx, int opTypeEnum, int op_type) {
+static int instOperatorPush(AST *ast, char **command_line, int operand_idx, int opTypeEnum) {
+    int op_type;
     char *str[NUM_OF_OPERANDS];
     int rc;
 
@@ -281,7 +276,6 @@ static int instOperatorPush(AST *ast, char **command_line, int operand_idx, int 
             }else{
                 ast->command.instruction.operands[operand_idx].operand_select.label = my_strdup(command_line[1 + operand_idx], -1);
             }
-            
             break;
         }
         case DIRECT: {
@@ -326,20 +320,18 @@ AST *createNode(char *line) {
     char *ptr;
     char *endptr;
     int type_enum;
-    int op_type = 0;
     int i = 0;
     int num_of_operands = 0;
     int rc;
-    AST *ast = (AST *)calloc(sizeof(AST), 1);
+    AST *ast;
+    
+    ast = (AST *)calloc(sizeof(AST), 1);
     if (ast == NULL) {
         perror("Memory allocation failed (front->createNode)");
         exit(EXIT_FAILURE);
     }
 
     rc = parseLine(line, command_line); /*check for error code*/
-
-    //rc = opcodePerOperand(ast, IMMEDIATE, operand_idx + 1, operand_idx); /*setting opcode (of instruction) to operand field in instruction line*/
-
     if (rc != RC_OK) {
         free(ast);
         PRINT_ERROR_MSG(RC_E_INVALID_CMD);
@@ -358,14 +350,14 @@ AST *createNode(char *line) {
         rc = deleteFirstString(command_line); /*check for error code*/
     }
 
+    ast->cmd_type = type_enum;
+
     switch (type_enum) {
         case INSTRUCTION: {
-            ast->cmd_type = INSTRUCTION;
-
             num_of_operands = numValidInstOperands(ast->command.instruction.inst_type);
 
             for (i = 0; i < num_of_operands; i++) {
-                rc = instOperatorPush(ast, command_line, i, type_enum, op_type);
+                rc = instOperatorPush(ast, command_line, i, type_enum);
                 if (rc != RC_OK)
                    PRINT_ERROR_MSG(RC_E_FAILED_RETRIEVE_OPERANDS);
             }
@@ -373,7 +365,6 @@ AST *createNode(char *line) {
             break;
         }
         case DIRECTIVE: {
-            ast->cmd_type = DIRECTIVE;
             switch (ast->command.directive.type)
             {
             case STRING:
@@ -411,7 +402,6 @@ AST *createNode(char *line) {
             break;
         }
         case DEFINE:{
-            ast->cmd_type = DEFINE;
             ast->command.define.label = my_strdup(command_line[1], -1);
             ast->command.define.number = atoi(command_line[2]);
         }

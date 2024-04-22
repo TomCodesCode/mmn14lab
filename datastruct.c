@@ -42,7 +42,7 @@ static SymbolsTbl * symbols_tbl = NULL;
 static int num_of_symbols = 0;
 #define SYM_TABLE_BULK_SIZE 20
 
-static int initSymbolsTbl() {
+static int initSymbolsTbl(void) {
     SymbolsTbl * symbols_tbl_tmp = NULL;
     if (!(num_of_symbols % SYM_TABLE_BULK_SIZE)) {
         if (!symbols_tbl)
@@ -59,7 +59,7 @@ static int initSymbolsTbl() {
     return RC_OK;
 }
 
-SymbolsTbl * getSymbolsTbl() {
+SymbolsTbl * getSymbolsTbl(void) {
     if (!symbols_tbl) 
         PRINT_ERROR_MSG(RC_E_UNINITIALIZED_SYM_TBL);
     
@@ -104,7 +104,7 @@ int getSymbolVal(const char * symbol, int * value) {
     return RC_NOT_FOUND;
 }
 
-int dumpSymbolTbl() {
+int dumpSymbolTbl(void) {
     int i;
     if (!symbols_tbl) {
         PRINT_ERROR_MSG(RC_E_UNINITIALIZED_SYM_TBL);
@@ -118,9 +118,12 @@ int dumpSymbolTbl() {
     return RC_OK;
 }
 
+#if 0
+
 int calcOpcodePart(Opcodes *opcode_node, int wordtype, int num, int in_line_part){
     int neg_bool = FALSE;
     Opcodes *opcode_node_cpy = opcode_node;
+
     /*ast->opcode[in_line_part].opcode = 0;*/
     switch (wordtype){
         case ARE:
@@ -155,6 +158,7 @@ int calcOpcodePart(Opcodes *opcode_node, int wordtype, int num, int in_line_part
             break;
     }
     ast->opcode[in_line_part].opcode |= opcode_cpy.opcode;
+
     return RC_OK;
 }
 
@@ -169,6 +173,4 @@ int opcodePerOperand(AST *ast, int num, int operand_idx){
     return rc;
 }
 
-Opcodes *createOpcodesNode(AST *ast, int num, int in_line_part, int operand_idx){
-    Opcodes newnode
-}
+#endif
