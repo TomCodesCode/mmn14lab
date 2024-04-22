@@ -57,19 +57,22 @@ static int initSymbolsTbl(void) {
     }
     return RC_OK;
 }
-
-SymbolsTbl * getSymbolsTbl(void) {
+/*
+static SymbolsTbl * getSymbolsTbl(void) {
     if (!symbols_tbl) 
         PRINT_ERROR_MSG(RC_E_UNINITIALIZED_SYM_TBL);
     
     return symbols_tbl;
-}
+}*/
 
 int addSymbolVal(char * symbol, int symbol_type, int value) {
     int val_tmp;
     int rc;
 
-    if (RC_OK == getSymbolVal(symbol, &val_tmp)) {
+    if (symbol[strlen(symbol)-1] == ':')
+        symbol[strlen(symbol)-1] = 0;
+
+    if (RC_OK == getSymbolVal(symbol, symbol_type, 0, &val_tmp)) { /*added symbol type as a parameter*/
         PRINT_ERROR_MSG(RC_E_DUPLICATED_SYMBOL);
         printf("Symbol %s already exists\n", symbol);
         return RC_E_DUPLICATED_SYMBOL;
@@ -87,16 +90,52 @@ int addSymbolVal(char * symbol, int symbol_type, int value) {
     return RC_OK;
 }
 
-int getSymbolVal(const char * symbol, int * value) {
+static int symbolUsage(int idx, int ic)
+{
+    struct symbol_usage * usage;
+
+    if (symbols_tbl[idx].usage == NULL) {
+        symbols_tbl[idx].usage = calloc(1, sizeof(struct symbol_usage));
+        if (symbols_tbl[idx].usage == NULL) {
+            PRINT_ERROR_MSG(RC_E_ALLOC_FAILED);
+            exit (RC_E_ALLOC_FAILED);
+        }
+    }
+    usage = symbols_tbl[idx].usage;
+
+    while (usage->next) {
+        if (usage->ic == ic)
+            return RC_OK;
+        usage = usage->next;
+    }
+    
+    usage->next = calloc(1, sizeof(struct symbol_usage));
+    usage = usage->next;
+
+    if (usage == NULL) {
+        PRINT_ERROR_MSG(RC_E_ALLOC_FAILED);
+        exit (RC_E_ALLOC_FAILED);
+    }
+
+    usage->ic = ic;
+    return RC_OK;
+}
+
+int getSymbolVal(const char * symbol, enum SymbolContext type, int ic, int * value) {
     int i;
+    int rc;
+
     if (!symbols_tbl) {
         return RC_E_UNINITIALIZED_SYM_TBL;
     }
 
     for (i = 0; i < num_of_symbols; i++) {
-        if (!strcmp(symbol, symbols_tbl[i].label)) {
+        if (!strcmp(symbol, symbols_tbl[i].label) && type == symbols_tbl[i].SymContext) {
             *value = symbols_tbl[i].value;
-            return RC_OK;
+
+            rc = symbolUsage(i, ic);
+
+            return rc;
         }
     }
 
@@ -105,71 +144,27 @@ int getSymbolVal(const char * symbol, int * value) {
 
 int dumpSymbolTbl(void) {
     int i;
+    struct symbol_usage * usage;
+
+    printf("===DUMP SYMBOL TABLE ===\n");
+
     if (!symbols_tbl) {
         PRINT_ERROR_MSG(RC_E_UNINITIALIZED_SYM_TBL);
         return RC_E_UNINITIALIZED_SYM_TBL;
     }
 
     for (i = 0; i < num_of_symbols; i++) {
-        printf("[%d] Symbol: %s Type: %d Value: %d\n", i, symbols_tbl[i].label, symbols_tbl[i].SymContext, symbols_tbl[i].value);
+        printf("[%d] Symbol: %s Type: %d Value: %d ", i, symbols_tbl[i].label, symbols_tbl[i].SymContext, symbols_tbl[i].value);
+        printf("Usage: ");
+        usage = symbols_tbl[i].usage;
+
+        while (usage) {
+            if (usage->ic)
+                printf("%d ", usage->ic);
+            usage = usage->next;
+        }
+        printf("\n");
     }
 
     return RC_OK;
 }
-
-#if 0
-
-int calcOpcodePart(Opcodes *opcode_node, int wordtype, int num, int in_line_part){
-    int neg_bool = FALSE;
-    Opcodes *opcode_node_cpy = opcode_node;
-
-    /*ast->opcode[in_line_part].opcode = 0;*/
-    switch (wordtype){
-        case ARE:
-            ast->opcode[in_line_part].opcode |= (num & 0x3);
-            break;
-        
-        case OPERAND_2_TYPE:
-            ast->opcode[in_line_part].opcode |= ((num & 0x3) << 2);
-            break;
-        
-        case OPERAND_1_TYPE:
-            ast->opcode[in_line_part].opcode |= ((num & 0x3) << 4);
-            break;
-        
-        case INSTTYPE:
-            ast->opcode[in_line_part].opcode |= ((num & 0xf) << 6);
-            break;
-        
-        case VALUE:
-            if (num < 0){
-                neg_bool = TRUE;
-                num = (-1) * num;
-            ast->opcode[in_line_part].opcode |= (num & 0xf) << 2;
-            if (neg_bool){
-                num = ~num;
-                num++;
-            }
-            break;
-            }
-
-        default:
-            break;
-    }
-    ast->opcode[in_line_part].opcode |= opcode_cpy.opcode;
-
-    return RC_OK;
-}
-
-int opcodePerOperand(AST *ast, int num, int operand_idx){
-    int rc;
-    if (operand_idx == 0)
-        rc = calcOpcodePart(ast, OPERAND_1_TYPE, num, operand_idx + 1);
-    else if (operand_idx == 1)
-        rc = calcOpcodePart(ast, OPERAND_2_TYPE, num, operand_idx + 1);
-    else
-        rc = RC_E_FAILED_RETRIEVE_OPERANDS;
-    return rc;
-}
-
-#endif

@@ -64,7 +64,8 @@ static int islabel (char *str) {
     return FALSE;
 }
 
-static int isImmediate (char *str) {
+
+static int isImmediateVal (char *str) {
     int i = 0;
 
     if (*str != '#' || *str == 0)
@@ -79,18 +80,26 @@ static int isImmediate (char *str) {
                 return FALSE;
         }
     }
-    else if (isalpha(str[i++])) {
+    
+    return TRUE;
+}
+
+static int isImmediateLabel (char *str) {
+    int i = 0;
+
+    if (*str != '#' || *str == 0)
+        return FALSE;
+
+    i++;
+    if (isalpha(str[i++])) {
         for (; str[i]; i++) {
             if (!isalnum(str[i]))
                 return FALSE;
         }
     }
-    else {
-        return FALSE;
-    }
 
     return TRUE;
-  }
+}
 
 static int isRegister (char *str) {
     if (str[REG_NAME_LEN])
@@ -148,8 +157,10 @@ static int deleteFirstString(t_commandLine str) {
 }
 
 static int getOperandType (char *str, int * operand_type) {
-    if (isImmediate(str))
-        *operand_type = IMMEDIATE;
+    if (isImmediateVal(str))
+        *operand_type = IMMEDIATE_VAL;
+    else if (isImmediateLabel(str))
+        *operand_type = IMMEDIATE_LABEL;
     else if (isDirect(str))
         *operand_type = DIRECT;
     else if (isIndexNum(str))
@@ -264,21 +275,19 @@ static int instOperatorPush(AST *ast, char **command_line, int operand_idx, int 
 
     ast->command.instruction.operands[operand_idx].type = op_type;
     switch (op_type) {
-        case IMMEDIATE: {
-            if (atoi(command_line[1 + operand_idx] + 1) || (*(command_line[1 + operand_idx] + 1) == '0')) { /*check if the immediate is a number or label type*/
-                ast->command.instruction.operands[operand_idx].operand_select.immediate = atoi(command_line[1 + operand_idx] + 1);
-            }else{
-                ast->command.instruction.operands[operand_idx].operand_select.label = my_strdup(command_line[1 + operand_idx], -1);
-            }
+        case IMMEDIATE_VAL:
+            ast->command.instruction.operands[operand_idx].operand_select.immediate = atoi(command_line[1 + operand_idx] + 1);
             IC++;
             break;
-        }
-        case DIRECT: {
+        case IMMEDIATE_LABEL:
             ast->command.instruction.operands[operand_idx].operand_select.label = my_strdup(command_line[1 + operand_idx], -1);
             IC++;
             break;
-        }
-        case INDEX_NUM: {
+        case DIRECT:
+            ast->command.instruction.operands[operand_idx].operand_select.label = my_strdup(command_line[1 + operand_idx], -1);
+            IC++;
+            break;
+        case INDEX_NUM:
             rc = dismantleOperand(command_line[1 + operand_idx], str); /*separate the operand and the index*/
             if (rc != RC_OK) break;
             ast->command.instruction.operands[operand_idx].operand_select.index_op.label1 = my_strdup(str[0], -1);
@@ -287,8 +296,7 @@ static int instOperatorPush(AST *ast, char **command_line, int operand_idx, int 
             free(str[0]);
             free(str[1]);
             break;
-        }
-        case INDEX_LABEL: {
+        case INDEX_LABEL:
             rc = dismantleOperand(command_line[1 + operand_idx], str); /*separate the operand and the index*/
             if (rc != RC_OK) break;
             ast->command.instruction.operands[operand_idx].operand_select.index_op.label1 = my_strdup(str[0], -1);
@@ -297,8 +305,7 @@ static int instOperatorPush(AST *ast, char **command_line, int operand_idx, int 
             free(str[0]);
             free(str[1]);
             break;
-        }
-        case REGISTER: {
+        case REGISTER:
             ast->command.instruction.operands[operand_idx].operand_select.reg = atoi(command_line[1 + operand_idx] + 1);
             if (operand_idx == 0)
                 IC++;
@@ -307,7 +314,6 @@ static int instOperatorPush(AST *ast, char **command_line, int operand_idx, int 
                     IC++;
             }
             break;
-        }
         default:
             break;
     }
@@ -441,6 +447,7 @@ int parseAssembley (FILE *amFile, AST ** code_ast, AST ** data_ast) {
 
         if (newnode->cmd_type == EMPTY) continue;
 
+        newnode->ic = cmd_ic;
         switch (newnode->cmd_type){
             case INSTRUCTION:
                 if (newnode->label_occurrence)
