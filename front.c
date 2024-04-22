@@ -4,6 +4,9 @@
 #include "datastruct.h"
 #include "errors.h"
 
+int IC = START_ADDRESS;
+int DC = 0;
+
 char *my_strdup(const char *src, int delta) {
     int len = (delta > 0) ? (delta + 1) : strlen(src) + 1;
     char *dst = (char *)malloc(len);
@@ -153,14 +156,19 @@ static int deleteFirstString(t_commandLine str) {
 static int getOperandType (char *str, int * operand_type) {
     if (isImmediate(str))
         *operand_type = IMMEDIATE;
+        //rc = opcodePerOperand(ast, IMMEDIATE, operand_idx + 1, operand_idx); /*setting opcode (of instruction) to operand field in instruction line*/
     else if (isDirect(str))
         *operand_type = DIRECT;
+        //rc = opcodePerOperand(ast, IMMEDIATE, operand_idx + 1, operand_idx); /*setting opcode (of instruction) to operand field in instruction line*/
     else if (isIndexNum(str))
         *operand_type = INDEX_NUM;
+        //rc = opcodePerOperand(ast, IMMEDIATE, operand_idx + 1, operand_idx); /*setting opcode (of instruction) to operand field in instruction line*/
     else if (isIndexLabel(str))
         *operand_type = INDEX_LABEL;
+        //rc = opcodePerOperand(ast, IMMEDIATE, operand_idx + 1, operand_idx); /*setting opcode (of instruction) to operand field in instruction line*/
     else if (isRegister(str))
         *operand_type = REGISTER;
+        //rc = opcodePerOperand(ast, IMMEDIATE, operand_idx + 1, operand_idx); /*setting opcode (of instruction) to operand field in instruction line*/
     else {
         PRINT_ERROR_MSG(RC_E_INVALID_OPERAND);
         return RC_E_INVALID_OPERAND;
@@ -171,7 +179,6 @@ static int getOperandType (char *str, int * operand_type) {
 
 static int parseLine (char *line, t_commandLine arr) {                 /*get a line, dismantle it into its properties*/
     char *token;
-    /*char line_cpy [MAX_LINE_LENGTH];*/
     char *line_cpy;
     char *token_delim = " =,\t\n\r";
     int i = 0;
@@ -187,22 +194,6 @@ static int parseLine (char *line, t_commandLine arr) {                 /*get a l
 
     token = strtok(line_cpy, token_delim);
     while (token != NULL) {
-        /*
-        ptr = token;
-        token = strtok(NULL, " =,\t\n\r");
-        endptr = ptr + 1;
-        while(*endptr == ' ' || *endptr == '=' || *endptr == ',' || *endptr == '\t') endptr--;
-        if (token == NULL) {
-            if (strlen(ptr) > MAX_TOKEN_LENGTH) {
-                return -1;
-            }
-            strcpy(arr[i], ptr);
-            break;
-        }
-        if ((endptr - ptr) > MAX_TOKEN_LENGTH) {
-            return -1;
-        }
-        */
         if (strlen(token) > MAX_TOKEN_LENGTH) {
             /* token is too long */
             return -1;
@@ -266,6 +257,7 @@ static int determineType (char *line, t_commandLine command_line, AST *curr) {
     for (i = 0; i < INST_SET_SIZE; i++) {
         if (!strcmp(command_line[token_idx], getInstByIdx(i))) {
             curr->command.instruction.inst_type = i;
+            //rc = opcodePerOperand(ast, IMMEDIATE, operand_idx + 1, operand_idx); /*setting opcode (of instruction) to operand field in instruction line*/
             return INSTRUCTION;
         }
     }
@@ -289,6 +281,7 @@ static int instOperatorPush(AST *ast, char **command_line, int operand_idx, int 
             }else{
                 ast->command.instruction.operands[operand_idx].operand_select.label = my_strdup(command_line[1 + operand_idx], -1);
             }
+            
             break;
         }
         case DIRECT: {
@@ -320,6 +313,10 @@ static int instOperatorPush(AST *ast, char **command_line, int operand_idx, int 
         default:
             break;
     }
+    if (rc != RC_OK){
+        PRINT_ERROR_MSG(rc);
+        return rc;
+    }
 
     return RC_OK;
 }
@@ -340,6 +337,8 @@ AST *createNode(char *line) {
     }
 
     rc = parseLine(line, command_line); /*check for error code*/
+
+    //rc = opcodePerOperand(ast, IMMEDIATE, operand_idx + 1, operand_idx); /*setting opcode (of instruction) to operand field in instruction line*/
 
     if (rc != RC_OK) {
         free(ast);
@@ -424,10 +423,14 @@ AST *createNode(char *line) {
 }
 
 AST *parseAssembley (FILE *amFile) {
-    AST *head = NULL;
-    AST *current = NULL;
+    int rc = RC_OK;
+    AST *data_head = NULL;
+    AST *data_current = NULL;
+    AST *code_head = NULL;
+    AST *code_current = NULL;
     AST *newnode = NULL;
     char line [MAX_LINE_LENGTH];
+    int cmd_type = 0;
 
     while (fgets(line, MAX_LINE_LENGTH, amFile)) {
         newnode = createNode(line);
@@ -437,22 +440,69 @@ AST *parseAssembley (FILE *amFile) {
 
         if (newnode->cmd_type == EMPTY) continue;
 
-        if (!head)
-            head = newnode;
-        else
-            current->next = newnode;
+        switch (newnode->cmd_type){
+            case INSTRUCTION:
+                if (newnode->label_occurrence)
+                    addSymbolVal(newnode->label_occurrence, CODEsym, IC);
+                
+                if (!code_head)
+                    code_head = newnode;
+                else
+                    code_current->next = newnode;
+                
+                code_current = newnode;
+                break;
+            
+            case DIRECTIVE:
+                cmd_type = newnode->command.directive.type;
+                if (cmd_type == STRING)
+                    addSymbolVal(newnode->command.directive.directive_options.label, STRINGsym, 00000000000);
+                else if (cmd_type == ENTRY || cmd_type == EXTERN){
+                    if (cmd_type == ENTRY)
+                        addSymbolVal(newnode->command.directive.directive_options.label, ENTRYsym, 00000000000);
+                    else
+                        addSymbolVal(newnode->command.directive.directive_options.label, EXTERNsym, 00000000000);
+                }
+                else if (cmd_type == DATA){
+                    addSymbolVal(newnode->command.directive.directive_options.label, DATAsym, 00000000000);
+                }
 
-        current = newnode;
+                if (!data_head)
+                    data_head = newnode;
+                else
+                    data_current->next = newnode;
+                
+                data_current = newnode;
+                break;
+            
+            case DEFINE:
+                addSymbolVal(newnode->command.define.label, DEFINEsym, newnode->command.define.number);
+                
+                if (!data_head)
+                    data_head = newnode;
+                else
+                    data_current->next = newnode;
+                
+                data_current = newnode;
+                break;
+
+            default:
+                break;
+        }
     }
 
-    return head;
+    if (rc) {
+        PRINT_ERROR_MSG(rc);
+        exit(rc);
+    }
+    return code_head;
 }
 
 
 
 char *getcwd(char *buf, size_t size);
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[]){ 
     char cwd[128];
     FILE *amFile = NULL;
     char * filename = "test.asm";
@@ -470,6 +520,9 @@ int main(int argc, char *argv[]) {
         return -1;
     }
     parseAssembley(amFile);
+
+    dumpSymbolTbl();
+
     fclose(amFile);
     return 0;
 }
