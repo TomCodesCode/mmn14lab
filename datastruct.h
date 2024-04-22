@@ -13,7 +13,7 @@ enum InstructionType {
 };
 
 enum OperandType {
-    IMMEDIATE, DIRECT, INDEX_NUM, INDEX_LABEL, REGISTER
+    IMMEDIATE_VAL, IMMEDIATE_LABEL, DIRECT, INDEX_NUM, INDEX_LABEL, REGISTER
 };
 
 struct Define {
@@ -74,6 +74,7 @@ enum cmd_type {
 typedef struct AST {
     char *label_occurrence;
     enum cmd_type cmd_type;
+    int ic;
     union {
         struct Define define;
 
@@ -93,14 +94,20 @@ enum SymbolContext {
     CODEsym, STRINGsym, DATAsym, ENTRYsym, EXTERNsym, DEFINEsym
 };
 
+struct symbol_usage {
+    int ic;
+    struct symbol_usage * next;
+};
+
 typedef struct Symbols {
     char *label;
     enum SymbolContext SymContext;
     int value;
+    struct symbol_usage * usage;
 } SymbolsTbl;
 
 enum WordType {
-    ARE, OPERAND_1_TYPE, OPERAND_2_TYPE, INSTTYPE, VALUE
+    ARE, OPERAND_1_TYPE, OPERAND_2_TYPE, INSTTYPE, VALUE, REGISTER_1, REGISTER_2
 };
 
 typedef struct Instructions {
