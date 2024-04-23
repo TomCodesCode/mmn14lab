@@ -16,11 +16,15 @@ enum OperandType {
     IMMEDIATE_VAL, IMMEDIATE_LABEL, DIRECT, INDEX_NUM, INDEX_LABEL, REGISTER
 };
 
+#define OPCODE_OPERAND_TYPE_IMMEDIATE 0
+#define OPCODE_OPERAND_TYPE_DIRECT    1
+#define OPCODE_OPERAND_TYPE_INDEX     2
+#define OPCODE_OPERAND_TYPE_REGISTER  3
+
 struct Define {
     char *label;
     int number;
 };
-
 
 /*Define structures for instruction operands*/
 struct Operand {
@@ -107,7 +111,7 @@ typedef struct Symbols {
 } SymbolsTbl;
 
 enum WordType {
-    ARE, OPERAND_1_TYPE, OPERAND_2_TYPE, INSTTYPE, VALUE, REGISTER_1, REGISTER_2
+    ARE, OPERAND_1_TYPE, OPERAND_2_TYPE, INSTTYPE, VALUE, VALUE_STR, REGISTER_1, REGISTER_2
 };
 
 typedef struct Instructions {
@@ -116,4 +120,10 @@ typedef struct Instructions {
     char *dest;
     char *src;
 } Instructions;
+
+
+#define BYTE2BINSTR "%c%c%c%c%c%c%c%c"
+#define BYTE2BIN(c)  \
+  ((c) & 0x80 ? '1' : '0'), ((c) & 0x40 ? '1' : '0'), ((c) & 0x20 ? '1' : '0'), ((c) & 0x10 ? '1' : '0'), \
+  ((c) & 0x08 ? '1' : '0'), ((c) & 0x04 ? '1' : '0'), ((c) & 0x02 ? '1' : '0'), ((c) & 0x01 ? '1' : '0') 
 

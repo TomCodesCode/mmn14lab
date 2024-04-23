@@ -12,6 +12,7 @@ const char *errorMsg[] = {
     /*RC_E_UNINITIALIZED_SYM_TBL*/      "uninitialized symbol table",
     /*RC_E_DUPLICATED_SYMBOL*/          "redefinition of symbol or lable",
     /*RC_E_NO_AST_TABLE*/               "no AST provided, or empty",
-    /*RC_E_LABEL_NOT_DEFINED_BFR_USE*/  "label was not defined before use"
+    /*RC_E_LABEL_NOT_DEFINED_BFR_USE*/  "label was not defined before use",
+    /*RC_E_NO_QUOTATION_IN_STR*/        "no quotation mark in string",
     /*last*/                            ""
 };
