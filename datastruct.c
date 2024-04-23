@@ -121,6 +121,20 @@ static int symbolUsage(int idx, int ic)
     return RC_OK;
 }
 
+int getSymbolTypeForARE(const char * symbol){
+    int i;
+
+    if (!symbols_tbl) 
+        return RC_E_UNINITIALIZED_SYM_TBL;
+
+    for (i = 0; i < num_of_symbols; i++){
+        if(!strcmp(symbol, symbols_tbl[i].label) && symbols_tbl[i].SymContext  != DEFINEsym && symbols_tbl[i].SymContext != EXTERNsym){
+            return RC_OK;
+        }
+    }
+    return RC_NOT_FOUND;
+}
+
 int getSymbolVal(const char * symbol, enum SymbolContext type, int ic, int * value) {
     int i;
     int rc;
@@ -216,15 +230,23 @@ static int initOpcodesTbl(void) {
 int addOpcode(int wordtype, int num, enum Bool inc_line){
     int rc;
     Opcodes * cur_opcode;
-
-    if (inc_line && opcodes_arr)
-        num_of_opcodes++;
+    int opcode_idx;
 
     rc = initOpcodesTbl();
     if (rc != RC_OK)
         return rc;
     
-    cur_opcode = &(opcodes_arr[num_of_opcodes]);
+    if (inc_line)
+        num_of_opcodes++;
+
+    if (!num_of_opcodes) {
+        PRINT_ERROR_MSG(RC_E_UNINITIALIZED_SYM_TBL);
+        return RC_E_UNINITIALIZED_SYM_TBL;
+    }
+
+    opcode_idx = num_of_opcodes - 1;
+
+    cur_opcode = &(opcodes_arr[opcode_idx]);
 
     switch (wordtype){
         case ARE:
@@ -247,8 +269,8 @@ int addOpcode(int wordtype, int num, enum Bool inc_line){
             cur_opcode->opcode |= ((num & 0xfff) << 2);
             break;
 
-        case VALUE_STR:
-            cur_opcode->opcode = (num & 0x3ff);
+        case VALUE_STR_DATA:
+            cur_opcode->opcode = (num & 0x3fff);
             break;
 
         case REGISTER_1:
@@ -275,6 +297,8 @@ int dumpOpcodesTbl(void) {
     int i;
     char byte_str[9];
 
+
+
     for (i = 0; i < num_of_opcodes; i++) {
         printf("[%04d] ", i + 100);
         getByteStr(byte_str, (opcodes_arr[i].opcode>>8)&0xff);
@@ -289,3 +313,18 @@ int dumpOpcodesTbl(void) {
     return RC_OK;
 }
 
+
+char *my_strdup(const char *src, int delta) {
+    int len = (delta > 0) ? (delta + 1) : strlen(src) + 1;
+    char *dst = (char *)malloc(len);
+
+    if (dst == NULL) {
+        PRINT_ERROR_MSG(RC_E_ALLOC_FAILED);
+        exit(RC_E_ALLOC_FAILED);
+    }
+
+    memcpy(dst, src, len - 1);
+    dst[len - 1] = '\0';
+
+    return dst;
+}
