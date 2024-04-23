@@ -1,21 +1,5 @@
 #include "lib.h"
 
-
-char *my_strdup(const char *src, int delta) {
-    int len = (delta > 0) ? (delta + 1) : strlen(src) + 1;
-    char *dst = (char *)malloc(len);
-
-    if (dst == NULL) {
-        PRINT_ERROR_MSG(RC_E_ALLOC_FAILED);
-        exit(RC_E_ALLOC_FAILED);
-    }
-
-    memcpy(dst, src, len - 1);
-    dst[len - 1] = '\0';
-
-    return dst;
-}
-
 static int isSkipLine(const char *line){
     int i = 0;
     if (!line)
@@ -331,6 +315,7 @@ AST *createNode(char *line) {
     char *endptr;
     int type_enum;
     int i = 0;
+    int data_objects = 0;
     int num_of_operands = 0;
     int rc;
     AST *ast;
@@ -399,16 +384,20 @@ AST *createNode(char *line) {
                 ptr = command_line[1];
                 while (ptr){
                     if (isprint(*ptr)){
+                        data_objects++;
                         if (strtol(ptr, &endptr, 10) || *ptr == '0'){
                             ast->command.directive.directive_options.data[i].data_options.number = (int)strtol(ptr, &endptr, 10);
+                            ast->command.directive.directive_options.data[i].type = NUMBER_DATA;
                         }else{
                             ast->command.directive.directive_options.data[i].data_options.label = my_strdup(ptr, -1);
+                            ast->command.directive.directive_options.data[i].type = LABEL_DATA;
                         }
                         i++;
                         ptr = command_line[1 + i];
                     }
                     else printf ("Error: Not an alpha-numeric data type.");
                 }
+                ast->command.directive.data_objects = data_objects;
                 IC += i;
 
                 break;
@@ -444,6 +433,8 @@ int parseAssembley (FILE *amFile, AST ** code_ast, AST ** data_ast) {
     
     while (fgets(line, MAX_LINE_LENGTH, amFile)) {
         int cmd_ic = IC;
+        DC = IC;
+
         newnode = createNode(line);
 
         if (!newnode)
@@ -455,6 +446,7 @@ int parseAssembley (FILE *amFile, AST ** code_ast, AST ** data_ast) {
         if (newnode->cmd_type == EMPTY) continue;
 
         newnode->ic = cmd_ic;
+        newnode->dc = cmd_ic;
         switch (newnode->cmd_type){
             case INSTRUCTION:
                 if (newnode->label_occurrence)

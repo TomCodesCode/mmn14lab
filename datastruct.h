@@ -48,8 +48,14 @@ enum DirectiveType {
     STRING, ENTRY, EXTERN, DATA
 };
 
+/*Define enum for type data number(label by define or number)*/
+enum DataTypeEnum{
+    NUMBER_DATA, LABEL_DATA
+};
+
 struct DataDirective {
     char *label;
+    enum DataTypeEnum type;
     union {
         int number;
         char *label;
@@ -64,10 +70,11 @@ struct String {
 
 struct Directive {
     enum DirectiveType type;
+    int data_objects;
     union {
         struct String string; /*for .string*/
         char *label; /*for .entry and .extern*/
-        struct DataDirective data [50]; /*for .data. can  hold up to 30 objects.*/
+        struct DataDirective data [MAX_DATA_OBJECTS]; /*for .data. can  hold up to 30 objects.*/
     } directive_options;
 };
 
@@ -79,6 +86,7 @@ typedef struct AST {
     char *label_occurrence;
     enum cmd_type cmd_type;
     int ic;
+    int dc;
     union {
         struct Define define;
 
@@ -111,7 +119,7 @@ typedef struct Symbols {
 } SymbolsTbl;
 
 enum WordType {
-    ARE, OPERAND_1_TYPE, OPERAND_2_TYPE, INSTTYPE, VALUE, VALUE_STR, REGISTER_1, REGISTER_2
+    ARE, OPERAND_1_TYPE, OPERAND_2_TYPE, INSTTYPE, VALUE, VALUE_STR_DATA, REGISTER_1, REGISTER_2
 };
 
 typedef struct Instructions {
