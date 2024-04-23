@@ -42,6 +42,7 @@ int main(int argc, char *argv[]){
     midPassing(data_ast);
 
     dumpSymbolTbl();
+    dumpOpcodesTbl();
 
     fclose(amFile);
     return 0;
