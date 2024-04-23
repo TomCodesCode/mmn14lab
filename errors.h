@@ -12,13 +12,9 @@ enum {
     RC_E_DUPLICATED_SYMBOL,
     RC_E_NO_AST_TABLE,
     RC_E_LABEL_NOT_DEFINED_BFR_USE,
+    RC_E_NO_QUOTATION_IN_STR,
     RC_E_last
 } RC_CODE;
-
-enum {
-    FALSE = 0,
-    TRUE
-} BOOL;
 
 extern const char *errorMsg[];
 

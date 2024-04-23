@@ -168,3 +168,124 @@ int dumpSymbolTbl(void) {
 
     return RC_OK;
 }
+
+
+int getOpcodeTypeByOperand(enum OperandType op_type) {
+    switch (op_type) {
+        case IMMEDIATE_VAL:
+        case IMMEDIATE_LABEL:
+            return OPCODE_OPERAND_TYPE_IMMEDIATE;
+        case DIRECT:
+            return OPCODE_OPERAND_TYPE_DIRECT;
+        case INDEX_NUM:
+        case INDEX_LABEL:
+            return OPCODE_OPERAND_TYPE_INDEX;
+        case REGISTER:
+            return OPCODE_OPERAND_TYPE_REGISTER;
+        default:
+            break;
+    }
+    PRINT_ERROR_MSG(RC_E_INVALID_OPERAND);
+    return RC_E_INVALID_OPERAND;
+}
+
+/*
+ * Opcode generation
+ */
+static Opcodes * opcodes_arr = NULL;
+#define OPCODE_TABLE_BULK_SIZE 20
+static int num_of_opcodes = 0;
+
+static int initOpcodesTbl(void) {
+    Opcodes * opcodes_arr_tmp = NULL;
+    if (!(num_of_opcodes % OPCODE_TABLE_BULK_SIZE)) {
+        if (!opcodes_arr)
+            opcodes_arr_tmp = (Opcodes *)calloc(sizeof(Opcodes), OPCODE_TABLE_BULK_SIZE);
+        else
+            opcodes_arr_tmp = (Opcodes *)realloc(opcodes_arr, (num_of_opcodes + OPCODE_TABLE_BULK_SIZE)*sizeof(Opcodes));
+
+        opcodes_arr = opcodes_arr_tmp;
+    }
+    if (!opcodes_arr) {
+        PRINT_ERROR_MSG(RC_E_UNINITIALIZED_SYM_TBL);
+        return RC_E_UNINITIALIZED_SYM_TBL;
+    }
+    return RC_OK;
+}
+
+int addOpcode(int wordtype, int num, enum Bool inc_line){
+    int rc;
+    Opcodes * cur_opcode;
+
+    if (inc_line && opcodes_arr)
+        num_of_opcodes++;
+
+    rc = initOpcodesTbl();
+    if (rc != RC_OK)
+        return rc;
+    
+    cur_opcode = &(opcodes_arr[num_of_opcodes]);
+
+    switch (wordtype){
+        case ARE:
+            cur_opcode->opcode |= (num & 0x3);
+            break;
+        
+        case OPERAND_2_TYPE:
+            cur_opcode->opcode |= ((num & 0x3) << 2);
+            break;
+        
+        case OPERAND_1_TYPE:
+            cur_opcode->opcode |= ((num & 0x3) << 4);
+            break;
+        
+        case INSTTYPE:
+            cur_opcode->opcode |= ((num & 0xf) << 6);
+            break;
+        
+        case VALUE:
+            cur_opcode->opcode |= ((num & 0xfff) << 2);
+            break;
+
+        case VALUE_STR:
+            cur_opcode->opcode = (num & 0x3ff);
+            break;
+
+        case REGISTER_1:
+            cur_opcode->opcode |= (num & 0x7) << 5;
+            break;
+
+        case REGISTER_2:
+            cur_opcode->opcode |= (num & 0x7) << 2;
+            break;
+
+        default:
+            break;
+    }
+
+    return RC_OK;
+}
+
+static int getByteStr(char * byte_str, char c) {
+    sprintf(byte_str, BYTE2BINSTR, BYTE2BIN(c));
+    return RC_OK;
+}
+
+int dumpOpcodesTbl(void) {
+    int i;
+    char byte_str[9];
+
+    for (i = 0; i < num_of_opcodes; i++) {
+        printf("[%04d] ", i + 100);
+        getByteStr(byte_str, (opcodes_arr[i].opcode>>8)&0xff);
+        byte_str[0] = ' ';
+        byte_str[1] = ' ';
+        printf("%s", byte_str);
+        getByteStr(byte_str, opcodes_arr[i].opcode&0xff);
+        printf("%s", byte_str);
+        printf("\n");
+    }
+
+    return RC_OK;
+}
+

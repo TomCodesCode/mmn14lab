@@ -7,3 +7,9 @@
 #define MAX_COMMAND_SIZE 10
 #define INST_SET_SIZE 16
 #define REG_NAME_LEN 2
+
+
+enum Bool {
+    FALSE = 0,
+    TRUE
+} BOOL;

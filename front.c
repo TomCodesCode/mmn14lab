@@ -68,27 +68,26 @@ static int islabel (char *str) {
 static int isImmediateVal (char *str) {
     int i = 0;
 
-    if (*str != '#' || *str == 0)
-        return FALSE;
+    if (*str != '#') return FALSE;
 
     i++;
+    if (str[i] == '+' || str[i] == '-') i++;
 
-    if (str[i] == '+' || str[i] == '-' || isdigit(str[i])) {
-        i++;
+    if (isdigit(str[i++])) {
         for (; str[i]; i++) {
             if (!isdigit(str[i]))
                 return FALSE;
         }
+        return TRUE;
     }
     
-    return TRUE;
+    return FALSE;
 }
 
 static int isImmediateLabel (char *str) {
     int i = 0;
 
-    if (*str != '#' || *str == 0)
-        return FALSE;
+    if (*str != '#') return FALSE;
 
     i++;
     if (isalpha(str[i++])) {
@@ -96,9 +95,10 @@ static int isImmediateLabel (char *str) {
             if (!isalnum(str[i]))
                 return FALSE;
         }
+        return TRUE;
     }
 
-    return TRUE;
+    return FALSE;
 }
 
 static int isRegister (char *str) {
@@ -280,7 +280,7 @@ static int instOperatorPush(AST *ast, char **command_line, int operand_idx, int 
             IC++;
             break;
         case IMMEDIATE_LABEL:
-            ast->command.instruction.operands[operand_idx].operand_select.label = my_strdup(command_line[1 + operand_idx], -1);
+            ast->command.instruction.operands[operand_idx].operand_select.label = my_strdup(command_line[1 + operand_idx] + 1, -1);
             IC++;
             break;
         case DIRECT:
@@ -379,8 +379,14 @@ AST *createNode(char *line) {
             switch (ast->command.directive.type)
             {
             case STRING:
-                ptr = command_line[1] + 1;
-                ast->command.directive.directive_options.string.string = my_strdup(ptr, strchr(ptr, '"') - ptr); /*ignoring the "" in the string delaration*/
+                ptr = command_line[1];
+                endptr = ptr;
+                while (isprint(*endptr)) endptr++;
+                ast->command.directive.directive_options.string.string = my_strdup(ptr, endptr - ptr); /*allocate and cpy string to AST*/
+
+                IC += strlen(ast->command.directive.directive_options.string.string) - 2;  /* not counting quotations */
+                IC++; /* for null terminator */
+
                 break;
             
             case ENTRY:
@@ -403,6 +409,7 @@ AST *createNode(char *line) {
                     }
                     else printf ("Error: Not an alpha-numeric data type.");
                 }
+                IC += i;
 
                 break;
             
@@ -434,7 +441,7 @@ int parseAssembley (FILE *amFile, AST ** code_ast, AST ** data_ast) {
 
     *code_ast = NULL;
     *data_ast = NULL;
-
+    
     while (fgets(line, MAX_LINE_LENGTH, amFile)) {
         int cmd_ic = IC;
         newnode = createNode(line);
@@ -464,15 +471,15 @@ int parseAssembley (FILE *amFile, AST ** code_ast, AST ** data_ast) {
             case DIRECTIVE:
                 cmd_type = newnode->command.directive.type;
                 if (cmd_type == STRING)
-                    addSymbolVal(newnode->command.directive.directive_options.label, STRINGsym, 00000000000);
+                    addSymbolVal(newnode->command.directive.directive_options.label, STRINGsym, cmd_ic);
                 else if (cmd_type == ENTRY || cmd_type == EXTERN){
                     if (cmd_type == ENTRY)
-                        addSymbolVal(newnode->command.directive.directive_options.label, ENTRYsym, 00000000000);
+                        addSymbolVal(newnode->command.directive.directive_options.label, ENTRYsym, cmd_ic);
                     else
-                        addSymbolVal(newnode->command.directive.directive_options.label, EXTERNsym, 00000000000);
+                        addSymbolVal(newnode->command.directive.directive_options.label, EXTERNsym, cmd_ic);
                 }
                 else if (cmd_type == DATA){
-                    addSymbolVal(newnode->command.directive.directive_options.label, DATAsym, 00000000000);
+                    addSymbolVal(newnode->command.directive.directive_options.label, DATAsym, cmd_ic);
                 }
 
                 if (!data_head)

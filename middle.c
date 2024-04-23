@@ -1,82 +1,6 @@
 #include "lib.h"
 
-static int mid_rc = RC_OK;
-static Opcodes * opcodes_arr = NULL;
-#define OPCODE_TABLE_BULK_SIZE 20
-static int num_of_opcodes = 0;
-
-static int initOpcodesTbl(void) {
-    Opcodes * opcodes_arr_tmp = NULL;
-    if (!(num_of_opcodes % OPCODE_TABLE_BULK_SIZE)) {
-        if (!opcodes_arr)
-            opcodes_arr_tmp = (Opcodes *)calloc(sizeof(Opcodes), OPCODE_TABLE_BULK_SIZE);
-        else
-            opcodes_arr_tmp = (Opcodes *)realloc(opcodes_arr, (num_of_opcodes + OPCODE_TABLE_BULK_SIZE)*sizeof(Opcodes));
-
-        opcodes_arr = opcodes_arr_tmp;
-    }
-    if (!opcodes_arr) {
-        PRINT_ERROR_MSG(RC_E_UNINITIALIZED_SYM_TBL);
-        return RC_E_UNINITIALIZED_SYM_TBL;
-    }
-    return RC_OK;
-}
-
-int addOpcode(int wordtype, int num, int opcode_index){
-    int rc;
-    int neg_bool = FALSE;
-    Opcodes opcode_cpy;
-    rc = initOpcodesTbl();
-    
-    opcode_cpy = opcodes_arr[opcode_index];
-
-    switch (wordtype){
-        case ARE:
-            opcodes_arr[opcode_index].opcode |= (num & 0x3);
-            break;
-        
-        case OPERAND_2_TYPE:
-            opcodes_arr[opcode_index].opcode |= ((num & 0x3) << 2);
-            break;
-        
-        case OPERAND_1_TYPE:
-            opcodes_arr[opcode_index].opcode |= ((num & 0x3) << 4);
-            break;
-        
-        case INSTTYPE:
-            opcodes_arr[opcode_index].opcode |= ((num & 0xf) << 6);
-            break;
-        
-        case VALUE:
-            if (num < 0){
-                neg_bool = TRUE;
-                num = (-1) * num;
-            }
-            opcodes_arr[opcode_index].opcode |= (num & 0xf) << 2;
-            
-            if (neg_bool){
-                num = ~num;
-                num++;
-            }
-            break;
-
-        case REGISTER_1:
-            opcodes_arr[opcode_index].opcode |= (num & 0x7) << 2;
-
-        case REGISTER_2:
-            opcodes_arr[opcode_index].opcode |= (num & 0x7) << 4;
-
-        default:
-            break;
-    }
-    opcodes_arr[opcode_index].opcode |= (opcode_cpy.opcode & 0xa);
-    num_of_opcodes++;
-
-    return rc;
-}
-
-
-Opcodes * midPassing(AST *ast) {
+int midPassing(AST *ast) {
     int rc;
     int operand_val_num;
     char *operand_val_str;
@@ -84,25 +8,49 @@ Opcodes * midPassing(AST *ast) {
     int operand_index;
     int symbol_index;
     int num_of_operands;
-    int opcode_index = 0;
     /*int data_index = 0;*/
     AST * cur_ast = ast;
-
+    int mid_rc = RC_OK;
+    
     if (!ast){
         PRINT_ERROR_MSG(RC_E_NO_AST_TABLE);
-        return NULL;
+        return RC_E_NO_AST_TABLE;
     }
 
     while (cur_ast)
     {
         switch (cur_ast->cmd_type) {
             case INSTRUCTION:
-                rc = addOpcode(INSTTYPE, cur_ast->command.instruction.inst_type, opcode_index);
-                rc = addOpcode(OPERAND_2_TYPE, cur_ast->command.instruction.operands[1].type, opcode_index);
-                rc = addOpcode(OPERAND_1_TYPE, cur_ast->command.instruction.operands[0].type, opcode_index);
-                rc = addOpcode(ARE, 00, opcode_index);
+                rc = addOpcode(INSTTYPE, cur_ast->command.instruction.inst_type, TRUE);
+                if (rc != RC_OK) {
+                    if (mid_rc == RC_OK) mid_rc = rc;
+                    break;
+                }
+
                 num_of_operands = numValidInstOperands(cur_ast->command.instruction.inst_type);
-                opcode_index++;
+
+                if (num_of_operands == 2) {
+                    rc = addOpcode(OPERAND_2_TYPE, getOpcodeTypeByOperand(cur_ast->command.instruction.operands[1].type), FALSE);
+                    if (rc != RC_OK) {
+                        if (mid_rc == RC_OK) mid_rc = rc;
+                        break;
+                    }
+                }
+                
+                if (num_of_operands >= 1) {
+                    int op_type = OPERAND_1_TYPE;
+                    if (num_of_operands == 1) op_type = OPERAND_2_TYPE;
+                    rc = addOpcode(op_type, getOpcodeTypeByOperand(cur_ast->command.instruction.operands[0].type), FALSE);
+                    if (rc != RC_OK) {
+                        if (mid_rc == RC_OK) mid_rc = rc;
+                        break;
+                    }
+                }
+                rc = addOpcode(ARE, 00, FALSE);
+                if (rc != RC_OK) {
+                    if (mid_rc == RC_OK) mid_rc = rc;
+                    break;
+                }
                 
                 for (operand_index = 0; operand_index < num_of_operands; operand_index++){
                     switch (cur_ast->command.instruction.operands[operand_index].type){
@@ -111,13 +59,18 @@ Opcodes * midPassing(AST *ast) {
                             rc = getSymbolVal(cur_ast->command.instruction.operands[operand_index].operand_select.label, DEFINEsym, cur_ast->ic, &operand_val_num);
                             if (rc != RC_OK){
                                 PRINT_ERROR_MSG(RC_E_LABEL_NOT_DEFINED_BFR_USE);
+                                if (mid_rc == RC_OK) mid_rc = rc;
                                 break;
                             }
                             cur_ast->command.instruction.operands[operand_index].operand_select.immediate = operand_val_num;
                         /* fall thru */
                         case IMMEDIATE_VAL:
                             operand_val_num = cur_ast->command.instruction.operands[operand_index].operand_select.immediate;
-                            rc = addOpcode(VALUE, operand_val_num, opcode_index);
+                            rc = addOpcode(VALUE, operand_val_num, TRUE);
+                            if (rc != RC_OK) {
+                                if (mid_rc == RC_OK) mid_rc = rc;
+                                break;
+                            }
                             symbol_index++;
                             break;
 
@@ -130,75 +83,89 @@ Opcodes * midPassing(AST *ast) {
                             for (i = 0; i < sizeof(sym_type)/sizeof(int); i++) {
                                 rc = getSymbolVal(operand_val_str, sym_type[i], cur_ast->ic, &operand_val_num);
                                 if (rc == RC_OK){
-                                    rc = addOpcode(VALUE, operand_val_num, opcode_index);
+                                    if (sym_type[i] == EXTERNsym) operand_val_num = 0;
+                                    rc = addOpcode(VALUE, operand_val_num, TRUE);
+                                    if (sym_type[i] == EXTERNsym) rc = addOpcode(ARE, 1, FALSE);
                                     break;
                                 }
                             }
                             if (rc != RC_OK) {
                                 PRINT_ERROR_MSG(RC_NOT_FOUND);
                                 printf("symbol '%s' not found\n", operand_val_str);
-                                mid_rc = RC_NOT_FOUND;
+                                if (mid_rc == RC_OK) mid_rc = RC_NOT_FOUND;
                             }
                             break;
                         }
                         case INDEX_NUM:
                             rc = getSymbolVal(cur_ast->command.instruction.operands[operand_index].operand_select.index_op.label1, DATAsym, cur_ast->ic, &operand_val_num);
-                            rc = addOpcode(VALUE, operand_val_num, opcode_index);
                             if (rc == RC_OK)
-                                rc = addOpcode(VALUE, operand_val_num, opcode_index);
+                                rc = addOpcode(VALUE, operand_val_num, TRUE);
                             rc = getSymbolVal(cur_ast->command.instruction.operands[operand_index].operand_select.index_op.label1, STRINGsym, cur_ast->ic, &operand_val_num);
-                            rc = addOpcode(VALUE, operand_val_num, opcode_index);
                             if (rc == RC_OK)
-                                rc = addOpcode(VALUE, operand_val_num, opcode_index);
+                                rc = addOpcode(VALUE, operand_val_num, TRUE);
                             rc = getSymbolVal(cur_ast->command.instruction.operands[operand_index].operand_select.index_op.label1, EXTERNsym, cur_ast->ic, &operand_val_num);
-                            rc = addOpcode(VALUE, operand_val_num, opcode_index); /*first part of operand (label)*/
-                            if (rc == RC_OK)
-                                rc = addOpcode(VALUE, operand_val_num, opcode_index);
-                            opcode_index++;
+                            if (rc == RC_OK) {
+                                rc = addOpcode(VALUE, 0, TRUE);
+                                rc = addOpcode(ARE, 1, FALSE);
+                            }
                             operand_val_num = cur_ast->command.instruction.operands[operand_index].operand_select.index_op.index_select.number;
-                            rc += addOpcode(VALUE, operand_val_num, opcode_index); /*second part of operand (index)*/
+                            rc += addOpcode(VALUE, operand_val_num, TRUE); /*second part of operand (index)*/
                             if (rc != RC_OK) mid_rc = RC_E_ALLOC_FAILED;
                             break;
 
                         case INDEX_LABEL:
                             rc = getSymbolVal(cur_ast->command.instruction.operands[operand_index].operand_select.index_op.label1, DATAsym, cur_ast->ic, &operand_val_num);
-                            rc = addOpcode(VALUE, operand_val_num, opcode_index);
                             if (rc == RC_OK)
-                                rc = addOpcode(VALUE, operand_val_num, opcode_index);
+                                rc = addOpcode(VALUE, operand_val_num, TRUE);
                             rc = getSymbolVal(cur_ast->command.instruction.operands[operand_index].operand_select.index_op.label1, STRINGsym, cur_ast->ic, &operand_val_num);
-                            rc = addOpcode(VALUE, operand_val_num, opcode_index);
                             if (rc == RC_OK)
-                                rc = addOpcode(VALUE, operand_val_num, opcode_index);
+                                rc = addOpcode(VALUE, operand_val_num, TRUE);
                             rc = getSymbolVal(cur_ast->command.instruction.operands[operand_index].operand_select.index_op.label1, EXTERNsym, cur_ast->ic, &operand_val_num);
-                            rc = addOpcode(VALUE, operand_val_num, opcode_index); /*first part of operand (label)*/
                             if (rc == RC_OK)
-                                rc = addOpcode(VALUE, operand_val_num, opcode_index);
-                            opcode_index++;
+                                rc = addOpcode(VALUE, operand_val_num, TRUE);
                             rc = getSymbolVal(cur_ast->command.instruction.operands[operand_index].operand_select.index_op.index_select.label2, DEFINEsym, cur_ast->ic, &operand_val_num);
-                            rc = addOpcode(VALUE, operand_val_num, opcode_index); /*second part of operand (index)*/
+                            rc = addOpcode(VALUE, operand_val_num, TRUE); /*second part of operand (index)*/
                             break;
 
                         case REGISTER:
                             if (operand_index == 1 && cur_ast->command.instruction.operands[operand_index].type == REGISTER){
-                                rc = addOpcode(REGISTER_2, cur_ast->command.instruction.operands[operand_index].operand_select.reg, opcode_index);
+                                rc = addOpcode(REGISTER_2, cur_ast->command.instruction.operands[operand_index].operand_select.reg, FALSE);
                                 break;
                             }
-                            rc = addOpcode(REGISTER_1, cur_ast->command.instruction.operands[operand_index].operand_select.reg, opcode_index);
+                            rc = addOpcode(REGISTER_1, cur_ast->command.instruction.operands[operand_index].operand_select.reg, TRUE);
                             break;
                         default:
                             break;
                     }
-                    opcode_index++;
                 }
                 break;
 
             case DIRECTIVE:
                 if (cur_ast->command.directive.type == STRING){
-                    while (operand_val_str){
-                        rc = addOpcode(VALUE, *operand_val_str++, opcode_index++);
+                    operand_val_str = cur_ast->command.directive.directive_options.string.string;
+                    if (!operand_val_str) {
+                        PRINT_ERROR_MSG(RC_E_INVALID_OPERAND);
+                        break;
                     }
+                    if (*operand_val_str != '"') {
+                        PRINT_ERROR_MSG(RC_E_NO_QUOTATION_IN_STR);
+                        break;
+                    }
+                    if (operand_val_str[strlen(operand_val_str)-1] != '"') {
+                        PRINT_ERROR_MSG(RC_E_NO_QUOTATION_IN_STR);
+                        break;
+                    }
+
+                    cur_ast->command.directive.directive_options.string.string++;
+                    operand_val_str = cur_ast->command.directive.directive_options.string.string;
+                    operand_val_str[strlen(operand_val_str)-1] = 0;
+
+                    while (*operand_val_str) {
+                        addOpcode(VALUE, *(operand_val_str++), TRUE);
+                    }
+                    addOpcode(VALUE, *operand_val_str, TRUE);
                 }
-                else if (cur_ast->command.directive.type == DATA){
+                else if (cur_ast->command.directive.type == DATA) {
                     /* code */
                 }
             default:
@@ -207,5 +174,5 @@ Opcodes * midPassing(AST *ast) {
         cur_ast = cur_ast->next;
     }
     
-    return opcodes_arr;
+    return RC_OK;
 }

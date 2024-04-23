@@ -11,4 +11,8 @@ int getSymbolVal(const char * symbol, enum SymbolContext type, int ic, int * val
 int dumpSymbolTbl(void);
 int calcOpcodePart(Opcodes * opcode, int wordtype, int num, int in_line_part);
 int opcodePerOperand(AST *ast, int num, int in_line_part, int operand_idx);
-Opcodes * midPassing(AST *ast);
+int midPassing(AST *ast);
+int dumpOpcodesTbl(void);
+int addOpcode(int wordtype, int num, enum Bool inc_line);
+int getOpcodeTypeByOperand(enum OperandType op_type);
+
