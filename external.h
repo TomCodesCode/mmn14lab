@@ -7,6 +7,7 @@ int numValidInstOperands(int inst);
 char * getInstByIdx(int idx);
 /*SymbolsTbl * getSymbolsTbl(void);*/
 int addSymbolVal(char * symbol, int symbol_type, int value);
+int getSymbolTypeForARE(const char * symbol);
 int getSymbolVal(const char * symbol, enum SymbolContext type, int ic, int * value);
 int dumpSymbolTbl(void);
 int calcOpcodePart(Opcodes * opcode, int wordtype, int num, int in_line_part);
@@ -15,4 +16,4 @@ int midPassing(AST *ast);
 int dumpOpcodesTbl(void);
 int addOpcode(int wordtype, int num, enum Bool inc_line);
 int getOpcodeTypeByOperand(enum OperandType op_type);
-
+char *my_strdup(const char *src, int delta);
