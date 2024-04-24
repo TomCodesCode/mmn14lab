@@ -10,5 +10,6 @@
 #include "front.h"
 #include "errors.h"
 #include "external.h"
+#include "preproc.h"
 
 #endif /*_LIB_H_*/
