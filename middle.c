@@ -1,6 +1,6 @@
 #include "lib.h"
 
-#define ARE_A 0
+#define ARE_A 0 /*as defined in the booklet*/
 #define ARE_R 2
 #define ARE_E 1
 
@@ -85,6 +85,13 @@ int midPassing(AST *ast) {
                         /* fall thru */
                         case IMMEDIATE_VAL:
                             operand_val_num = cur_ast->command.instruction.operands[operand_index].operand_select.immediate;
+                            
+                            rc = isValidOperand(cur_ast->command.instruction.inst_type, cur_ast->command.instruction.operands[operand_index].type, operand_index);
+                            if (rc != RC_OK) { /*check if this is a legal use of an operand within the current inst type*/
+                                if (mid_rc == RC_OK) mid_rc = rc;
+                                break;
+                            }
+                            
                             rc = addOpcode(VALUE, operand_val_num, TRUE);
                             if (rc != RC_OK) {
                                 if (mid_rc == RC_OK) mid_rc = rc;
@@ -99,7 +106,14 @@ int midPassing(AST *ast) {
                             int sym_type[] = { STRINGsym, DATAsym, EXTERNsym, CODEsym };
                             int i;
                             operand_val_str = cur_ast->command.instruction.operands[operand_index].operand_select.label;
-                            rc = RC_NOT_FOUND;
+                            
+                            rc = isValidOperand(cur_ast->command.instruction.inst_type, cur_ast->command.instruction.operands[operand_index].type, operand_index);
+                            if (rc != RC_OK) { /*check if this is a legal use of an operand within the current inst type*/
+                                if (mid_rc == RC_OK) mid_rc = rc;
+                                break;
+                            }
+
+                            rc = RC_NOT_FOUND; /*NO NEED FOR THIS*/
                             for (i = 0; i < sizeof(sym_type)/sizeof(int); i++) {
                                 rc = getSymbolVal(operand_val_str, sym_type[i], cur_ast->dc, &operand_val_num);
                                 if (rc == RC_OK){
@@ -121,6 +135,12 @@ int midPassing(AST *ast) {
                             break;
                         }
                         case INDEX_NUM:
+                            rc = isValidOperand(cur_ast->command.instruction.inst_type, cur_ast->command.instruction.operands[operand_index].type, operand_index);
+                            if (rc != RC_OK) { /*check if this is a legal use of an operand within the current inst type*/
+                                if (mid_rc == RC_OK) mid_rc = rc;
+                                break;
+                            }
+
                             rc = getSymbolVal(cur_ast->command.instruction.operands[operand_index].operand_select.index_op.label1, DATAsym, cur_ast->dc, &operand_val_num);
                             if (rc == RC_OK)
                                 rc = addOpcode(VALUE, operand_val_num, TRUE);
@@ -143,6 +163,12 @@ int midPassing(AST *ast) {
                             break;
 
                         case INDEX_LABEL:
+                            rc = isValidOperand(cur_ast->command.instruction.inst_type, cur_ast->command.instruction.operands[operand_index].type, operand_index);
+                            if (rc != RC_OK) { /*check if this is a legal use of an operand within the current inst type*/
+                                if (mid_rc == RC_OK) mid_rc = rc;
+                                break;
+                            }
+
                             rc = getSymbolVal(cur_ast->command.instruction.operands[operand_index].operand_select.index_op.label1, DATAsym, cur_ast->dc, &operand_val_num);
                             if (rc == RC_OK)
                                 rc = addOpcode(VALUE, operand_val_num, TRUE);
@@ -162,6 +188,12 @@ int midPassing(AST *ast) {
                             break;
 
                         case REGISTER:
+                            rc = isValidOperand(cur_ast->command.instruction.inst_type, cur_ast->command.instruction.operands[operand_index].type, operand_index);
+                            if (rc != RC_OK) { /*check if this is a legal use of an operand within the current inst type*/
+                                if (mid_rc == RC_OK) mid_rc = rc;
+                                break;
+                            }
+
                             if (operand_index == 1 && cur_ast->command.instruction.operands[operand_index].type == REGISTER){
                                 rc = addOpcode(REGISTER_2, cur_ast->command.instruction.operands[operand_index].operand_select.reg, FALSE);
                                 break;
@@ -211,6 +243,7 @@ int midPassing(AST *ast) {
                             if (rc == RC_OK)
                                 cur_ast->command.directive.directive_options.data[data_index].data_options.number = operand_val_num;
                             else{
+                                printf ("Label used in data: %s -> ", cur_ast->command.directive.directive_options.data[data_index].data_options.label);
                                 PRINT_ERROR_MSG(RC_NOT_FOUND);
                                 mid_rc = RC_NOT_FOUND;
                             }
@@ -226,5 +259,11 @@ int midPassing(AST *ast) {
         cur_ast = cur_ast->next;
     }
     
+    if (mid_rc != RC_OK){
+        printf ("\nNo output files. Exiting. Reason: -> ");
+        PRINT_ERROR_MSG(mid_rc);
+        return mid_rc;
+    }
+
     return RC_OK;
 }

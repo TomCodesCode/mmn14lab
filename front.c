@@ -1,5 +1,7 @@
 #include "lib.h"
 
+static int errors_found = FALSE; /* the program will termionate after front is done if this is TRUE*/
+
 static int isSkipLine(const char *line){
     int i = 0;
     if (!line)
@@ -261,22 +263,22 @@ static int instOperatorPush(AST *ast, char **command_line, int operand_idx, int 
     switch (op_type) {
         case IMMEDIATE_VAL:
             ast->command.instruction.operands[operand_idx].operand_select.immediate = atoi(command_line[1 + operand_idx] + 1);
-            IC++;
+            PC++;
             break;
         case IMMEDIATE_LABEL:
             ast->command.instruction.operands[operand_idx].operand_select.label = my_strdup(command_line[1 + operand_idx] + 1, -1);
-            IC++;
+            PC++;
             break;
         case DIRECT:
             ast->command.instruction.operands[operand_idx].operand_select.label = my_strdup(command_line[1 + operand_idx], -1);
-            IC++;
+            PC++;
             break;
         case INDEX_NUM:
             rc = dismantleOperand(command_line[1 + operand_idx], str); /*separate the operand and the index*/
             if (rc != RC_OK) break;
             ast->command.instruction.operands[operand_idx].operand_select.index_op.label1 = my_strdup(str[0], -1);
             ast->command.instruction.operands[operand_idx].operand_select.index_op.index_select.number = atoi(str[1]);
-            IC+=2;
+            PC+=2;
             free(str[0]);
             free(str[1]);
             break;
@@ -285,17 +287,17 @@ static int instOperatorPush(AST *ast, char **command_line, int operand_idx, int 
             if (rc != RC_OK) break;
             ast->command.instruction.operands[operand_idx].operand_select.index_op.label1 = my_strdup(str[0], -1);
             ast->command.instruction.operands[operand_idx].operand_select.index_op.index_select.label2 = my_strdup(str[1], -1);
-            IC+=2;
+            PC+=2;
             free(str[0]);
             free(str[1]);
             break;
         case REGISTER:
             ast->command.instruction.operands[operand_idx].operand_select.reg = atoi(command_line[1 + operand_idx] + 1);
             if (operand_idx == 0)
-                IC++;
+                PC++;
             else if (operand_idx == 1) {
                 if (ast->command.instruction.operands[0].type != REGISTER)
-                    IC++;
+                    PC++;
             }
             break;
         default:
@@ -348,7 +350,7 @@ AST *createNode(char *line) {
     ast->cmd_type = type_enum;
 
     switch (type_enum) {
-        case INSTRUCTION: {
+        case INSTRUCTION:
             num_of_operands = numValidInstOperands(ast->command.instruction.inst_type);
 
             for (i = 0; i < num_of_operands; i++) {
@@ -356,64 +358,75 @@ AST *createNode(char *line) {
                 if (rc != RC_OK)
                    PRINT_ERROR_MSG(RC_E_FAILED_RETRIEVE_OPERANDS);
             }
-            IC++;
+            PC++;
 
             break;
-        }
+        
         case DIRECTIVE: {
             switch (ast->command.directive.type)
             {
-            case STRING:
-                ptr = command_line[1];
-                endptr = ptr;
-                while (isprint(*endptr)) endptr++;
-                ast->command.directive.directive_options.string.string = my_strdup(ptr, endptr - ptr); /*allocate and cpy string to AST*/
+                case STRING:
+                    ptr = command_line[1];
+                    endptr = ptr;
+                    while (isprint(*endptr)) endptr++;
+                    ast->command.directive.directive_options.string.string = my_strdup(ptr, endptr - ptr); /*allocate and cpy string to AST*/
 
-                IC += strlen(ast->command.directive.directive_options.string.string) - 2;  /* not counting quotations */
-                IC++; /* for null terminator */
+                    PC += strlen(ast->command.directive.directive_options.string.string) - 2;  /* not counting quotations */
+                    PC++; /* for null terminator */
 
-                break;
-            
-            case ENTRY:
-            case EXTERN:
-                ast->command.directive.directive_options.label = my_strdup(command_line[1], -1);
-                break;
-            
-            case DATA:
-                i = 0;
-                ptr = command_line[1];
-                while (ptr){
-                    if (isprint(*ptr)){
-                        data_objects++;
-                        if (strtol(ptr, &endptr, 10) || *ptr == '0'){
-                            ast->command.directive.directive_options.data[i].data_options.number = (int)strtol(ptr, &endptr, 10);
-                            ast->command.directive.directive_options.data[i].type = NUMBER_DATA;
+                    break;
+                
+                case ENTRY:
+                case EXTERN:
+                    ast->command.directive.directive_options.label = my_strdup(command_line[1], -1);
+                    break;
+                
+                case DATA:
+                    i = 0;
+                    ptr = command_line[1];
+                    while (ptr){
+                        if (isprint(*ptr)){
+                            data_objects++;
+                            if (strtol(ptr, &endptr, 10) || *ptr == '0'){
+                                ast->command.directive.directive_options.data[i].data_options.number = (int)strtol(ptr, &endptr, 10);
+                                ast->command.directive.directive_options.data[i].type = NUMBER_DATA;
+                            }else{
+                                ast->command.directive.directive_options.data[i].data_options.label = my_strdup(ptr, -1);
+                                ast->command.directive.directive_options.data[i].type = LABEL_DATA;
+                            }
+                            i++;
+                            ptr = command_line[1 + i];
                         }else{
-                            ast->command.directive.directive_options.data[i].data_options.label = my_strdup(ptr, -1);
-                            ast->command.directive.directive_options.data[i].type = LABEL_DATA;
+                            printf ("Error: Not an alpha-numeric data type.");
+                            errors_found = TRUE;
                         }
-                        i++;
-                        ptr = command_line[1 + i];
                     }
-                    else printf ("Error: Not an alpha-numeric data type.");
-                }
-                ast->command.directive.data_objects = data_objects;
-                IC += i;
+                    ast->command.directive.data_objects = data_objects;
+                    PC += i;
 
-                break;
-            
-            default:
-                break;
+                    break;
+                
+                default:
+                    break;
             }
 
             break;
         }
-        case DEFINE:{
-            ast->command.define.label = my_strdup(command_line[1], -1);
-            ast->command.define.number = atoi(command_line[2]);
-        }
-        default:
-            break;
+            case DEFINE:{
+                ptr = command_line[2];
+                endptr = NULL;
+                if ((strtol(ptr, &endptr, 10) || *ptr == '0') || *endptr == 0){
+                    ast->command.define.label = my_strdup(command_line[1], -1);
+                    ast->command.define.number = atoi(command_line[2]);
+                }else{
+                    printf ("Error: Not a valid '.define' value. Lable: %s\n", command_line[1]);
+                    ast->cmd_type = EMPTY;
+                    errors_found = TRUE;
+                }
+                break;
+            }
+            default:
+                break;
     }
 
     return ast;
@@ -432,8 +445,8 @@ int parseAssembley (FILE *amFile, AST ** code_ast, AST ** data_ast) {
     *data_ast = NULL;
     
     while (fgets(line, MAX_LINE_LENGTH, amFile)) {
-        int cmd_ic = IC;
-        DC = IC;
+        int cmd_pc = PC;
+        int cmd_dc = DC;
 
         newnode = createNode(line);
 
@@ -445,12 +458,12 @@ int parseAssembley (FILE *amFile, AST ** code_ast, AST ** data_ast) {
 
         if (newnode->cmd_type == EMPTY) continue;
 
-        newnode->ic = cmd_ic;
-        newnode->dc = cmd_ic;
+        newnode->ic = cmd_pc;
+        newnode->dc = cmd_pc;
         switch (newnode->cmd_type){
             case INSTRUCTION:
                 if (newnode->label_occurrence)
-                    addSymbolVal(newnode->label_occurrence, CODEsym, cmd_ic);
+                    addSymbolVal(newnode->label_occurrence, CODEsym, cmd_pc);
                 
                 if (!code_head)
                     code_head = newnode;
@@ -462,16 +475,17 @@ int parseAssembley (FILE *amFile, AST ** code_ast, AST ** data_ast) {
             
             case DIRECTIVE:
                 cmd_type = newnode->command.directive.type;
-                if (cmd_type == STRING)
-                    addSymbolVal(newnode->command.directive.directive_options.label, STRINGsym, cmd_ic);
+                if (cmd_type == STRING) {
+                    addSymbolVal(newnode->command.directive.directive_options.label, STRINGsym, cmd_pc);
+                }
                 else if (cmd_type == ENTRY || cmd_type == EXTERN){
                     if (cmd_type == ENTRY)
-                        addSymbolVal(newnode->command.directive.directive_options.label, ENTRYsym, cmd_ic);
+                        addSymbolVal(newnode->command.directive.directive_options.label, ENTRYsym, cmd_pc);
                     else
-                        addSymbolVal(newnode->command.directive.directive_options.label, EXTERNsym, cmd_ic);
+                        addSymbolVal(newnode->command.directive.directive_options.label, EXTERNsym, cmd_pc);
                 }
                 else if (cmd_type == DATA){
-                    addSymbolVal(newnode->command.directive.directive_options.label, DATAsym, cmd_ic);
+                    addSymbolVal(newnode->command.directive.directive_options.label, DATAsym, cmd_pc);
                 }
 
                 if (!data_head)
@@ -500,6 +514,10 @@ int parseAssembley (FILE *amFile, AST ** code_ast, AST ** data_ast) {
 
     *code_ast = code_head;
     *data_ast = data_head;
+
+    if (errors_found == TRUE){
+        return RC_E_INVALID_CMD;
+    }
 
     return RC_OK;
 }
