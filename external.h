@@ -25,3 +25,5 @@ Opcodes * getOpcodes(void);
 char *my_strdup(const char *src, int delta);
 int isValidOperand(enum InstructionType inst_type, enum OperandType op_type, int operand_index);
 int backendPass(char * filename);
+int getNumOfSymbols();
+int getNumOfOpcodes();
