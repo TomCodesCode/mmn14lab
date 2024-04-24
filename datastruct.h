@@ -2,6 +2,9 @@
 
 #define NUM_OF_OPERANDS 2
 
+#define WILDCARD_DELIMITERS " \t\n\r"
+#define TOKEN_DELIMITERS " =,\t\n\r"
+
 typedef struct Opcodes{
     unsigned int opcode : 14;
     char * symbol;

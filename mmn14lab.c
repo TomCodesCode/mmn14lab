@@ -13,8 +13,6 @@ int main(int argc, char *argv[]){
     char * filename = "test.asm";
     AST * code_ast;
     AST * data_ast;
-    /*Opcodes * code_opcode_tbl;
-    Opcodes * data_opcode_tbl;*/
     int rc;
 
     if (argc > 1)
@@ -31,21 +29,18 @@ int main(int argc, char *argv[]){
     }
     
     rc = parseAssembley(amFile, &code_ast, &data_ast);
-    if (rc != RC_OK) 
-        exit (rc);
+    if (rc) exit (rc);
 
-    dumpSymbolTbl();
+    rc = middlePass(code_ast, data_ast);
+    if (rc) exit (rc);
 
-    midPassing(code_ast);
+    rc = backendPass(filename);
+    if (rc) exit (rc);
 
-    dumpSymbolTbl();
-
-    rc = midPassing(data_ast);
-    if (rc != RC_OK) 
-        exit (rc);
-
+#if 1 /*DEBUG*/
     dumpSymbolTbl();
     dumpOpcodesTbl();
+#endif
 
     printf("IC: %d DC: %d PC %d #instr:%d #data:%d \n",
         IC_START, DC_START, PC, 
@@ -53,5 +48,6 @@ int main(int argc, char *argv[]){
         DC_START?(PC-DC_START):0);
 
     fclose(amFile);
+
     return 0;
 }

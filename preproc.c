@@ -3,7 +3,6 @@
 #include "preproc.h"
 
 #define MAX_MACROS_NUMBER 20
-#define strcatMalloc(a, b) a = strcat(strcpy(malloc(strlen(a) + strlen(b) + 1), a), b)
 
 
 int * curr_read_position = 0;
