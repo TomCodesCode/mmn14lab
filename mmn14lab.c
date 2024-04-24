@@ -1,7 +1,8 @@
 #include "lib.h"
 
-
-int IC = START_ADDRESS;
+int IC_START = START_ADDRESS;
+int DC_START = 0;
+int PC = START_ADDRESS;
 int DC = 0;
 
 char *getcwd(char *buf, size_t size);
@@ -39,10 +40,17 @@ int main(int argc, char *argv[]){
 
     dumpSymbolTbl();
 
-    midPassing(data_ast);
+    rc = midPassing(data_ast);
+    if (rc != RC_OK) 
+        exit (rc);
 
     dumpSymbolTbl();
     dumpOpcodesTbl();
+
+    printf("IC: %d DC: %d PC %d #instr:%d #data:%d \n",
+        IC_START, DC_START, PC, 
+        DC_START?(DC_START-IC_START):(PC-IC_START), 
+        DC_START?(PC-DC_START):0);
 
     fclose(amFile);
     return 0;
