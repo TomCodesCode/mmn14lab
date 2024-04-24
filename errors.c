@@ -22,6 +22,7 @@ const char *errorMsg[] = {
     /*RC_E_FAILED_TO_OPEN_FILE*/        "failed to open file",
     /*RC_E_FILENAME_TOO_LONG*/          "input filename too long",
     /*RC_E_FAILED_TO_SCAN_MACROS*/      "failed to scan macros",
+    /*RC_E_GET_OPCODE_TBL_FAILED*/      "failed to retrieve opcode table"
     /*RC_E_BACKEND_FAILED*/             "backend failed",
     /*last*/                            ""
 };
