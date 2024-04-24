@@ -1,6 +1,6 @@
 #include "lib.h"
 
-
+/* dest and src are swapped (relative to the booklet table) for the sake of convenience*/
 Instructions inst_prop[INST_SET_SIZE] = {
     {"mov",	0,	"123",	"0123"},
     {"cmp",	1,	"0123",	"0123"},
@@ -57,13 +57,15 @@ static int initSymbolsTbl(void) {
     }
     return RC_OK;
 }
-/*
-static SymbolsTbl * getSymbolsTbl(void) {
-    if (!symbols_tbl) 
+
+SymbolsTbl * getSymbolsTbl(void) {
+    if (!symbols_tbl) {
         PRINT_ERROR_MSG(RC_E_UNINITIALIZED_SYM_TBL);
+        return NULL;
+    }
     
     return symbols_tbl;
-}*/
+}
 
 int addSymbolVal(char * symbol, int symbol_type, int value) {
     int val_tmp;
@@ -288,6 +290,15 @@ int addOpcode(int wordtype, int num, enum Bool inc_line){
     return RC_OK;
 }
 
+Opcodes * getOpcodes(void) {
+    if (!opcodes_arr) {
+        PRINT_ERROR_MSG(RC_E_UNINITIALIZED_Opcode_TBL);
+        return NULL;
+    }
+
+    return opcodes_arr;
+}
+
 static int getByteStr(char * byte_str, char c) {
     sprintf(byte_str, BYTE2BINSTR, BYTE2BIN(c));
     return RC_OK;
@@ -327,4 +338,37 @@ char *my_strdup(const char *src, int delta) {
     dst[len - 1] = '\0';
 
     return dst;
+}
+
+int isValidOperand(enum InstructionType inst_type, enum OperandType op_type, int operand_index){
+    int i = 0;
+    int actual_optype;
+    char *inst_option;
+    
+    if (op_type == IMMEDIATE_VAL || op_type == IMMEDIATE_LABEL) actual_optype = 0;
+    if (op_type == DIRECT) actual_optype = 1;
+    if (op_type == INDEX_NUM || op_type == INDEX_LABEL) actual_optype = 2;
+    if (op_type == REGISTER) actual_optype = 3;
+
+    if (operand_index == 0 && inst_prop[inst_type].dest){
+        inst_option = inst_prop[inst_type].dest;
+        while (i < strlen(inst_prop[i].dest)) {
+            if (*inst_option == actual_optype + 48)
+                return RC_OK;
+            i++;
+            inst_option++;
+        }
+    }
+
+    else if (operand_index == 1 && inst_prop[inst_type].src){
+        inst_option = inst_prop[inst_type].src;
+        while (i < strlen(inst_prop[i].src)) {
+            if (*inst_option == actual_optype + 48)
+                return RC_OK;
+            i++;
+            inst_option++;
+        }
+    }
+    
+    return RC_E_INVALID_OPERAND;
 }
