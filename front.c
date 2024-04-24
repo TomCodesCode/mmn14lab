@@ -565,7 +565,7 @@ int parseAssembley (FILE *amFile, AST ** code_ast, AST ** data_ast) {
                     if (cmd_type == ENTRY)
                         addSymbolVal(newnode->command.directive.directive_options.label, ENTRYsym, cmd_dc);
                     else
-                        addSymbolVal(newnode->command.directive.directive_options.label, EXTERNsym, cmd_dc);
+                        addSymbolVal(newnode->command.directive.directive_options.label, EXTERNsym, 0);
                 }
                 else if (cmd_type == DATA) {
                     addSymbolVal(newnode->command.directive.directive_options.label, DATAsym, cmd_dc);
@@ -599,22 +599,26 @@ int parseAssembley (FILE *amFile, AST ** code_ast, AST ** data_ast) {
     DC_START = PC;
     for (ast_tmp = data_head; ast_tmp; ast_tmp = ast_tmp->next) {
         int symbol_type;
+        int val;
         ast_tmp->dc += DC_START;
+        val = ast_tmp->dc;
         cmd_type = ast_tmp->command.directive.type;
         if (cmd_type == STRING)
             symbol_type = STRINGsym;
         else if (cmd_type == ENTRY || cmd_type == EXTERN) {
             if (cmd_type == ENTRY)
                 symbol_type = ENTRYsym;
-            else
+            else {
                 symbol_type = EXTERNsym;
+                val = 0;
+            }
         }
         else if (cmd_type == DATA)
             symbol_type = DATAsym;
         else
             continue;
         
-        updateSymbolVal(ast_tmp->command.directive.directive_options.label, symbol_type, ast_tmp->dc);
+        updateSymbolVal(ast_tmp->command.directive.directive_options.label, symbol_type, val);
     }
 
     PC += DC;

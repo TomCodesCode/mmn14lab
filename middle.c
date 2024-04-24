@@ -9,14 +9,11 @@
 *This function'll determine if this is an ARE R
 */
 int getARE(char * symbol){ 
-    int rc;
-    
-    rc = getSymbolTypeForARE(symbol);
+    int rc = getSymbolTypeForARE(symbol);
     if (rc != RC_OK)
-        PRINT_ERROR_MSG(rc);
-        return rc;
-    
-    return RC_OK;
+        *symbol = 0;
+
+    return rc;
 }
 
 static int middlePassStep(AST *ast) {
@@ -113,9 +110,9 @@ static int middlePassStep(AST *ast) {
                                 break;
                             }
 
-                            rc = RC_NOT_FOUND; /*NO NEED FOR THIS*/
+                            rc = RC_NOT_FOUND;
                             for (i = 0; i < sizeof(sym_type)/sizeof(int); i++) {
-                                rc = getSymbolVal(operand_val_str, sym_type[i], cur_ast->dc, &operand_val_num);
+                                rc = getSymbolVal(operand_val_str, sym_type[i], cur_ast->ic + 1, &operand_val_num);
                                 if (rc == RC_OK){
                                     if (sym_type[i] == EXTERNsym) operand_val_num = 0;
                                     rc = addOpcode(VALUE, operand_val_num, TRUE);
