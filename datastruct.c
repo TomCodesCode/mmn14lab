@@ -67,6 +67,21 @@ SymbolsTbl * getSymbolsTbl(void) {
     return symbols_tbl;
 }
 
+int updateSymbolVal(char * symbol, int symbol_type, int value) {
+   int i;
+
+    if (!symbols_tbl) 
+        return RC_E_UNINITIALIZED_SYM_TBL;
+
+    for (i = 0; i < num_of_symbols; i++){
+        if(!strcmp(symbol, symbols_tbl[i].label) && symbol_type == symbols_tbl[i].SymContext) {
+            symbols_tbl[i].value = value;
+            return RC_OK;
+        }
+    }
+    return RC_NOT_FOUND;
+}
+
 int addSymbolVal(char * symbol, int symbol_type, int value) {
     int val_tmp;
     int rc;
