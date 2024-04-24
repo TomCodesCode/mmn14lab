@@ -1,4 +1,3 @@
-
 enum {
     RC_OK = 0,
     RC_NOT_FOUND,
@@ -23,6 +22,7 @@ enum {
     RC_E_FAILED_TO_SCAN_MACROS,
     RC_E_GET_OPCODE_TBL_FAILED,
     RC_E_BACKEND_FAILED,
+    RC_E_NO_INPUT_FILE,
     RC_E_last
 } RC_CODE;
 

@@ -8,15 +8,28 @@ int DC = 0;
 
 int main(int argc, char *argv[]) { 
     char am_filename[MAX_FILENAME_LEN];
-    char * asm_filename = "test.as";
+    char base_filename[MAX_FILENAME_LEN];
+    char * asm_filename = NULL;
     FILE * amFile = NULL;
     AST * code_ast;
     AST * data_ast;
+    char * pchar;
     int rc;
 
-    if (argc > 1)
-        asm_filename = argv[1];
+    if (argc < 2) {
+        PRINT_ERROR_MSG(RC_E_NO_INPUT_FILE);
+        exit (RC_E_NO_INPUT_FILE);
+    }
 
+    asm_filename = argv[1];
+
+    strcpy(base_filename, asm_filename);
+    
+    pchar = strrchr(base_filename, '.');
+    if (pchar)
+        *pchar = 0;
+
+    strcpy(am_filename, base_filename);
     rc = preasm(asm_filename, am_filename);
     if (rc) exit (rc);
 
@@ -28,7 +41,7 @@ int main(int argc, char *argv[]) {
     rc = middlePass(code_ast, data_ast);
     if (rc) exit (rc);
 
-    rc = backendPass(asm_filename);
+    rc = backendPass(base_filename);
     if (rc) exit (rc);
 
 #if 1 /*DEBUG*/

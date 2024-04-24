@@ -41,6 +41,9 @@ static SymbolsTbl * symbols_tbl = NULL;
 static int num_of_symbols = 0;
 #define SYM_TABLE_BULK_SIZE 20
 
+int getNumOfSymbols() {
+    return num_of_symbols;
+}
 static int initSymbolsTbl(void) {
     SymbolsTbl * symbols_tbl_tmp = NULL;
     if (!(num_of_symbols % SYM_TABLE_BULK_SIZE)) {
@@ -323,6 +326,10 @@ Opcodes * getOpcodes(void) {
 static int getByteStr(char * byte_str, char c) {
     sprintf(byte_str, BYTE2BINSTR, BYTE2BIN(c));
     return RC_OK;
+}
+
+int getNumOfOpcodes() {
+    return num_of_opcodes;
 }
 
 int dumpOpcodesTbl(void) {

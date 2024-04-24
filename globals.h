@@ -10,6 +10,7 @@
 #define MAX_DATA_OBJECTS 50
 #define MAX_FILENAME_LCHK 128
 #define MAX_FILENAME_LEN (MAX_FILENAME_LCHK + 8)
+#define ENCRYPTED_OPCODE_LEN 7
 
 #define FN_OB_EXT  ".ob"
 #define FN_ENT_EXT ".ent"
