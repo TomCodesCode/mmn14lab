@@ -5,36 +5,30 @@ int DC_START = 0;
 int PC = START_ADDRESS;
 int DC = 0;
 
-char *getcwd(char *buf, size_t size);
 
-int main(int argc, char *argv[]){ 
-    char cwd[128];
-    FILE *amFile = NULL;
-    char * filename = "test.asm";
+int main(int argc, char *argv[]) { 
+    char am_filename[MAX_FILENAME_LEN];
+    char * asm_filename = "test.as";
+    FILE * amFile = NULL;
     AST * code_ast;
     AST * data_ast;
     int rc;
 
     if (argc > 1)
-        filename = argv[1];
+        asm_filename = argv[1];
 
-    amFile = fopen(filename, "r");
+    rc = preasm(asm_filename, am_filename);
+    if (rc) exit (rc);
 
-    getcwd(cwd, sizeof(cwd));
-    
-    if (!amFile)
-    {
-        printf("File not found: No '%s' in [%s]\n", filename, cwd);
-        return -1;
-    }
-    
+    amFile = fopen(am_filename, "r");
+
     rc = parseAssembley(amFile, &code_ast, &data_ast);
     if (rc) exit (rc);
 
     rc = middlePass(code_ast, data_ast);
     if (rc) exit (rc);
 
-    rc = backendPass(filename);
+    rc = backendPass(asm_filename);
     if (rc) exit (rc);
 
 #if 1 /*DEBUG*/

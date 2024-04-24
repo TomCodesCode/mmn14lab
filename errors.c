@@ -19,5 +19,9 @@ const char *errorMsg[] = {
     /*RC_E_TOO_MANY_ARGUMENTS*/         "too many arguments in command",
     /*RC_E_TOO_FEW_ARGUMENTS*/          "too few arguments in command",
     /*RC_E_MIDDLE_PASS_FAILED*/         "middle pass failed",
+    /*RC_E_FAILED_TO_OPEN_FILE*/        "failed to open file",
+    /*RC_E_FILENAME_TOO_LONG*/          "input filename too long",
+    /*RC_E_FAILED_TO_SCAN_MACROS*/      "failed to scan macros",
+    /*RC_E_BACKEND_FAILED*/             "backend failed",
     /*last*/                            ""
 };
