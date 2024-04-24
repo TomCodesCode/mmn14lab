@@ -138,12 +138,6 @@ int preasm (char * asFileName, char * amFileName) {
 
     getcwd(cwd, sizeof(cwd));
 
-    if (strlen(asFileName) > MAX_FILENAME_LCHK) {   
-        PRINT_ERROR_MSG(RC_E_FILENAME_TOO_LONG);
-        PRINT_MSG_STR(asFileName);
-        return RC_E_FILENAME_TOO_LONG;
-    }
-
     asFile = fopen(asFileName, "r");
     if (!asFile) {
         PRINT_ERROR_MSG(RC_E_FAILED_TO_OPEN_FILE);
@@ -152,7 +146,6 @@ int preasm (char * asFileName, char * amFileName) {
         return RC_E_FAILED_TO_OPEN_FILE;
     }
 
-    strcpy(amFileName, asFileName);
     strcat(amFileName, FN_AM_EXT);
 
     amFile = fopen(amFileName, "w");
