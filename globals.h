@@ -8,7 +8,13 @@
 #define INST_SET_SIZE 16
 #define REG_NAME_LEN 2
 #define MAX_DATA_OBJECTS 50
+#define MAX_FILENAME_LCHK 128
+#define MAX_FILENAME_LEN (MAX_FILENAME_LCHK + 8)
 
+#define FN_OB_EXT  ".ob"
+#define FN_ENT_EXT ".ent"
+#define FN_EXT_EXT ".ext"
+#define FN_AM_EXT  ".am"
 
 enum Bool {
     FALSE = 0,
