@@ -15,5 +15,9 @@ const char *errorMsg[] = {
     /*RC_E_NO_AST_TABLE*/               "no AST provided, or empty",
     /*RC_E_LABEL_NOT_DEFINED_BFR_USE*/  "label was not defined before use",
     /*RC_E_NO_QUOTATION_IN_STR*/        "no quotation mark in string",
+    /*RC_E_NO_DIRECTIVE_ARGUMENT*/      "no argument found in directive",
+    /*RC_E_TOO_MANY_ARGUMENTS*/         "too many arguments in command",
+    /*RC_E_TOO_FEW_ARGUMENTS*/          "too few arguments in command",
+    /*RC_E_MIDDLE_PASS_FAILED*/         "middle pass failed",
     /*last*/                            ""
 };

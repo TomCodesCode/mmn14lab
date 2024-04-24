@@ -19,7 +19,7 @@ int getARE(char * symbol){
     return RC_OK;
 }
 
-int midPassing(AST *ast) {
+static int middlePassStep(AST *ast) {
     int rc;
     int operand_val_num;
     char *operand_val_str;
@@ -267,3 +267,18 @@ int midPassing(AST *ast) {
 
     return RC_OK;
 }
+
+
+int middlePass(AST * code_ast, AST *data_ast) {
+    int rc1, rc2;
+
+    rc1 = middlePassStep(code_ast);
+    PRINT_ERROR_MSG(rc1);
+    rc2 = middlePassStep(data_ast);
+    PRINT_ERROR_MSG(rc2);
+    if (rc1 || rc2)
+        return RC_E_MIDDLE_PASS_FAILED;
+
+    return RC_OK;
+}
+        
