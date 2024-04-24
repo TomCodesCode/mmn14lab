@@ -11,6 +11,7 @@ char * getInstByIdx(int idx);
 int addSymbolVal(char * symbol, int symbol_type, int value);
 int getSymbolTypeForARE(const char * symbol);
 int getSymbolVal(const char * symbol, enum SymbolContext type, int ic, int * value);
+int updateSymbolVal(char * symbol, int symbol_type, int value);
 SymbolsTbl * getSymbolsTbl(void);
 int dumpSymbolTbl(void);
 int calcOpcodePart(Opcodes * opcode, int wordtype, int num, int in_line_part);

@@ -371,8 +371,8 @@ AST *createNode(char *line) {
                     while (isprint(*endptr)) endptr++;
                     ast->command.directive.directive_options.string.string = my_strdup(ptr, endptr - ptr); /*allocate and cpy string to AST*/
 
-                    PC += strlen(ast->command.directive.directive_options.string.string) - 2;  /* not counting quotations */
-                    PC++; /* for null terminator */
+                    DC += strlen(ast->command.directive.directive_options.string.string) - 2;  /* not counting quotations */
+                    DC++; /* for null terminator */
 
                     break;
                 
@@ -402,7 +402,7 @@ AST *createNode(char *line) {
                         }
                     }
                     ast->command.directive.data_objects = data_objects;
-                    PC += i;
+                    DC += i;
 
                     break;
                 
@@ -440,6 +440,7 @@ int parseAssembley (FILE *amFile, AST ** code_ast, AST ** data_ast) {
     AST *newnode = NULL;
     char line [MAX_LINE_LENGTH];
     int cmd_type = 0;
+    AST *ast_tmp;
 
     *code_ast = NULL;
     *data_ast = NULL;
@@ -459,7 +460,7 @@ int parseAssembley (FILE *amFile, AST ** code_ast, AST ** data_ast) {
         if (newnode->cmd_type == EMPTY) continue;
 
         newnode->ic = cmd_pc;
-        newnode->dc = cmd_pc;
+        newnode->dc = cmd_dc;
         switch (newnode->cmd_type){
             case INSTRUCTION:
                 if (newnode->label_occurrence)
@@ -476,16 +477,16 @@ int parseAssembley (FILE *amFile, AST ** code_ast, AST ** data_ast) {
             case DIRECTIVE:
                 cmd_type = newnode->command.directive.type;
                 if (cmd_type == STRING) {
-                    addSymbolVal(newnode->command.directive.directive_options.label, STRINGsym, cmd_pc);
+                    addSymbolVal(newnode->command.directive.directive_options.label, STRINGsym, cmd_dc);
                 }
                 else if (cmd_type == ENTRY || cmd_type == EXTERN){
                     if (cmd_type == ENTRY)
-                        addSymbolVal(newnode->command.directive.directive_options.label, ENTRYsym, cmd_pc);
+                        addSymbolVal(newnode->command.directive.directive_options.label, ENTRYsym, cmd_dc);
                     else
-                        addSymbolVal(newnode->command.directive.directive_options.label, EXTERNsym, cmd_pc);
+                        addSymbolVal(newnode->command.directive.directive_options.label, EXTERNsym, cmd_dc);
                 }
                 else if (cmd_type == DATA){
-                    addSymbolVal(newnode->command.directive.directive_options.label, DATAsym, cmd_pc);
+                    addSymbolVal(newnode->command.directive.directive_options.label, DATAsym, cmd_dc);
                 }
 
                 if (!data_head)
@@ -511,6 +512,30 @@ int parseAssembley (FILE *amFile, AST ** code_ast, AST ** data_ast) {
                 break;
         }
     }
+
+    ast_tmp = data_head;
+    DC_START = PC;
+    for (ast_tmp = data_head; ast_tmp; ast_tmp = ast_tmp->next) {
+        int symbol_type;
+        ast_tmp->dc += DC_START;
+        cmd_type = ast_tmp->command.directive.type;
+        if (cmd_type == STRING)
+            symbol_type = STRINGsym;
+        else if (cmd_type == ENTRY || cmd_type == EXTERN) {
+            if (cmd_type == ENTRY)
+                symbol_type = ENTRYsym;
+            else
+                symbol_type = EXTERNsym;
+        }
+        else if (cmd_type == DATA)
+            symbol_type = DATAsym;
+        else
+            continue;
+        
+        updateSymbolVal(ast_tmp->command.directive.directive_options.label, symbol_type, ast_tmp->dc);
+    }
+
+    PC += DC;
 
     *code_ast = code_head;
     *data_ast = data_head;
