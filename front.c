@@ -163,11 +163,38 @@ static int getOperandType (char *str, int * operand_type) {
     return RC_OK;
 }
 
-static int parseLine (char *line, t_commandLine arr) {                 /*get a line, dismantle it into its properties*/
+static char * getStringToken(char * str) {
+    char * str_token = NULL;
+
+    while (*str) {
+        if (!isspace(*str))
+            break;
+        str++;
+    }
+    if (*str != '"')
+        return NULL;
+
+    str_token = str++;
+
+    while (*str) {
+        if (*str == '"' && isspace(*(str+1))) {
+            *(str + 1) = 0;
+            return str_token;
+        }
+        str++;
+    }
+    
+    return NULL;
+}
+
+static int parseLine (char *line, t_commandLine arr, int * n_tokens) {                 /*get a line, dismantle it into its properties*/
     char *token;
     char *line_cpy;
-    char *token_delim = " =,\t\n\r";
+    char *token_delim = TOKEN_DELIMITERS;
     int i = 0;
+    char * str_token;
+
+    *n_tokens = 0;
 
     for (i = 0; i < MAX_COMMAND_SIZE; i++) {
         arr[i] = NULL;
@@ -180,6 +207,8 @@ static int parseLine (char *line, t_commandLine arr) {                 /*get a l
 
     token = strtok(line_cpy, token_delim);
     while (token != NULL) {
+        (*n_tokens)++;
+
         if (strlen(token) > MAX_TOKEN_LENGTH) {
             /* token is too long */
             return -1;
@@ -187,7 +216,24 @@ static int parseLine (char *line, t_commandLine arr) {                 /*get a l
         arr[i] = (char*)malloc(strlen(token)+1);
         strcpy(arr[i], token);
 
-        token = strtok(NULL, token_delim);
+        if (!strcmp(token, ".string")) {
+            str_token = getStringToken(token + strlen(token) + 1);
+            if (str_token == NULL) {
+                PRINT_ERROR_MSG(RC_E_NO_DIRECTIVE_ARGUMENT);
+                PRINT_MSG_STR(line);
+                errors_found = TRUE;
+                return RC_E_NO_DIRECTIVE_ARGUMENT;
+            }
+            (*n_tokens)++;
+
+            arr[++i] = (char*)malloc(strlen(str_token)+1);
+            strcpy(arr[i], str_token);
+
+            token = strtok(str_token + strlen(str_token) + 1, token_delim);
+        }
+        else {
+            token = strtok(NULL, token_delim);
+        }
         i++;
     }
     free(line_cpy);
@@ -320,6 +366,7 @@ AST *createNode(char *line) {
     int data_objects = 0;
     int num_of_operands = 0;
     int rc;
+    int n_tokens = 0;
     AST *ast;
     
     ast = (AST *)calloc(sizeof(AST), 1);
@@ -328,7 +375,7 @@ AST *createNode(char *line) {
         exit(EXIT_FAILURE);
     }
 
-    rc = parseLine(line, command_line); /*check for error code*/
+    rc = parseLine(line, command_line, &n_tokens); /*check for error code*/
     if (rc != RC_OK) {
         free(ast);
         PRINT_ERROR_MSG(RC_E_INVALID_CMD);
@@ -343,6 +390,7 @@ AST *createNode(char *line) {
     }
 
     if (islabel(command_line[0])) { /*saving label name into the ast and deleting from the current str array*/
+        n_tokens--;
         ast->label_occurrence = my_strdup(command_line[0], -1);
         rc = deleteFirstString(command_line); /*check for error code*/
     }
@@ -353,11 +401,25 @@ AST *createNode(char *line) {
         case INSTRUCTION:
             num_of_operands = numValidInstOperands(ast->command.instruction.inst_type);
 
+            if (num_of_operands > (n_tokens - 1)) {
+                PRINT_ERROR_MSG(RC_E_TOO_FEW_ARGUMENTS);
+                PRINT_MSG_STR(line);
+                errors_found = TRUE;
+                break;
+            }
+
             for (i = 0; i < num_of_operands; i++) {
                 rc = instOperatorPush(ast, command_line, i, type_enum);
                 if (rc != RC_OK)
                    PRINT_ERROR_MSG(RC_E_FAILED_RETRIEVE_OPERANDS);
             }
+
+            if (n_tokens > (num_of_operands + 1)) {
+                PRINT_ERROR_MSG(RC_E_TOO_MANY_ARGUMENTS);
+                PRINT_MSG_STR(line);
+                errors_found = TRUE;
+            }
+
             PC++;
 
             break;
@@ -368,17 +430,28 @@ AST *createNode(char *line) {
                 case STRING:
                     ptr = command_line[1];
                     endptr = ptr;
-                    while (isprint(*endptr)) endptr++;
+                    while (endptr && isprint(*endptr)) endptr++;
                     ast->command.directive.directive_options.string.string = my_strdup(ptr, endptr - ptr); /*allocate and cpy string to AST*/
 
                     DC += strlen(ast->command.directive.directive_options.string.string) - 2;  /* not counting quotations */
                     DC++; /* for null terminator */
+
+                    if (n_tokens > 2) {
+                        PRINT_ERROR_MSG(RC_E_TOO_MANY_ARGUMENTS);
+                        PRINT_MSG_STR(line);
+                        errors_found = TRUE;
+                    }
 
                     break;
                 
                 case ENTRY:
                 case EXTERN:
                     ast->command.directive.directive_options.label = my_strdup(command_line[1], -1);
+                    if (n_tokens > 2) {
+                        PRINT_ERROR_MSG(RC_E_TOO_MANY_ARGUMENTS);
+                        PRINT_MSG_STR(line);
+                        errors_found = TRUE;
+                    }
                     break;
                 
                 case DATA:
@@ -398,6 +471,7 @@ AST *createNode(char *line) {
                             ptr = command_line[1 + i];
                         }else{
                             printf ("Error: Not an alpha-numeric data type.");
+                            PRINT_MSG_STR(line);
                             errors_found = TRUE;
                         }
                     }
@@ -420,7 +494,13 @@ AST *createNode(char *line) {
                     ast->command.define.number = atoi(command_line[2]);
                 }else{
                     printf ("Error: Not a valid '.define' value. Lable: %s\n", command_line[1]);
+                    PRINT_MSG_STR(line);
                     ast->cmd_type = EMPTY;
+                    errors_found = TRUE;
+                }
+                if (n_tokens > 3) {
+                    PRINT_ERROR_MSG(RC_E_TOO_MANY_ARGUMENTS);
+                    PRINT_MSG_STR(line);
                     errors_found = TRUE;
                 }
                 break;
@@ -454,7 +534,9 @@ int parseAssembley (FILE *amFile, AST ** code_ast, AST ** data_ast) {
         if (!newnode)
         {
             PRINT_ERROR_MSG(RC_E_ALLOC_FAILED);
-            return RC_E_ALLOC_FAILED;
+            errors_found = TRUE;
+            continue;
+            /*return RC_E_ALLOC_FAILED;*/
         }
 
         if (newnode->cmd_type == EMPTY) continue;
@@ -479,13 +561,13 @@ int parseAssembley (FILE *amFile, AST ** code_ast, AST ** data_ast) {
                 if (cmd_type == STRING) {
                     addSymbolVal(newnode->command.directive.directive_options.label, STRINGsym, cmd_dc);
                 }
-                else if (cmd_type == ENTRY || cmd_type == EXTERN){
+                else if (cmd_type == ENTRY || cmd_type == EXTERN) {
                     if (cmd_type == ENTRY)
                         addSymbolVal(newnode->command.directive.directive_options.label, ENTRYsym, cmd_dc);
                     else
                         addSymbolVal(newnode->command.directive.directive_options.label, EXTERNsym, cmd_dc);
                 }
-                else if (cmd_type == DATA){
+                else if (cmd_type == DATA) {
                     addSymbolVal(newnode->command.directive.directive_options.label, DATAsym, cmd_dc);
                 }
 

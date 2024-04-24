@@ -323,8 +323,6 @@ int dumpOpcodesTbl(void) {
     int i;
     char byte_str[9];
 
-
-
     for (i = 0; i < num_of_opcodes; i++) {
         printf("[%04d] ", i + 100);
         getByteStr(byte_str, (opcodes_arr[i].opcode>>8)&0xff);
@@ -356,7 +354,7 @@ char *my_strdup(const char *src, int delta) {
 }
 
 int isValidOperand(enum InstructionType inst_type, enum OperandType op_type, int operand_index){
-    int i = 0;
+
     int actual_optype;
     char *inst_option;
     
@@ -367,20 +365,18 @@ int isValidOperand(enum InstructionType inst_type, enum OperandType op_type, int
 
     if (operand_index == 0 && inst_prop[inst_type].dest){
         inst_option = inst_prop[inst_type].dest;
-        while (i < strlen(inst_prop[i].dest)) {
+        while (inst_option) {
             if (*inst_option == actual_optype + 48)
                 return RC_OK;
-            i++;
             inst_option++;
         }
     }
 
     else if (operand_index == 1 && inst_prop[inst_type].src){
         inst_option = inst_prop[inst_type].src;
-        while (i < strlen(inst_prop[i].src)) {
+        while (inst_option) {
             if (*inst_option == actual_optype + 48)
                 return RC_OK;
-            i++;
             inst_option++;
         }
     }
