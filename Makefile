@@ -6,9 +6,8 @@ CFILES = mmn14lab.c front.c errors.c datastruct.c middle.c back.c preproc.c debu
 
 mmn14lab: $(CFILES) $(DEPS)
 	$(CC) -o $@ $(CFILES) $(CFLAGS)
-	-cp $@ a.out
 
 all: mmn14lab
 
 clean:
-	-rm mmn14lab *.o a.out
+	-rm mmn14lab
