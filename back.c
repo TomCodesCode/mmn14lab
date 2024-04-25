@@ -1,5 +1,12 @@
 #include "lib.h"
 
+/**
+ * The function `createObFile` writes encrypted opcode data to a file based on the opcodes table.
+ * 
+ * @param filename a string representing the name of the file to be created.
+ * 
+ * @return returns an integer value, which is either an error code indicating the reason for failure or `RC_OK`.
+ */
 static int createObFile(char *filename) {
     FILE * pFile = NULL;
     Opcodes * opcodes_table;
@@ -21,6 +28,7 @@ static int createObFile(char *filename) {
         return RC_E_FAILED_TO_OPEN_FILE;
     }
 
+    /*printing the amount of code lines and then the amount of data lines.*/
     fprintf(pFile, "%d %d\n", DC_START?(DC_START-IC_START):(PC-IC_START), DC_START?(PC-DC_START):0);
     
     for (i = 0; i < num_of_opcodes; i++) {
@@ -42,7 +50,7 @@ static int createObFile(char *filename) {
                     encr_code[ENCRYPTED_OPCODE_LEN - j - 1] = '*';
                     break;
             }
-            val >>= 2;
+            val >>= 2; /*in each itteration, move 2 bits to the right*/
         }
 
         fprintf(pFile, "%s\n", encr_code);
@@ -54,6 +62,14 @@ static int createObFile(char *filename) {
     return RC_OK;
 }
 
+/**
+ * The function `createEntFile` iterates through symbols, writes entries to a file, and returns a
+ * status code.
+ * 
+ * @param filename represents the name of the file to be created. This file will contain the addresses of .entry label definitions.
+ * 
+ * @return returns an integer value. If the file is successfully created and written to, it returns `RC_OK`.
+ */
 static int createEntFile(char *filename) {
     FILE * pFile = NULL;
     int i, j;
@@ -85,6 +101,14 @@ static int createEntFile(char *filename) {
     return RC_OK;
 }
 
+/**
+ * The function `createExtFile` iterates through symbols table, writes external symbols and their usage
+ * to a file.
+ * 
+ * @param filename represents the name of the file to be created. This file will contain the addresses of .extern label calls.
+ * 
+ * @return returns an integer value. If the file is successfully created and written to, it will return `RC_OK`.
+ */
 static int createExtFile(char *filename) {
     FILE * pFile = NULL;
     int i;
@@ -119,6 +143,15 @@ static int createExtFile(char *filename) {
     return RC_OK;
 }
 
+/**
+ * The function `backendPass` creates output files for object code, entry points, and external
+ * references based on the input filename.
+ * 
+ * @param filename the name of a file(s).
+ * 
+ * @return returns an integer value. If there is an error during the backend pass process (creating OB, ENT, EXT files), it will return `RC_E_BACKEND_FAILED`. Otherwise,
+ * it will return `RC_OK`.
+ */
 int backendPass(char * filename) {
     char out_filename[MAX_FILENAME_LEN];
     int f_error =  FALSE;
@@ -144,5 +177,5 @@ int backendPass(char * filename) {
         return RC_E_BACKEND_FAILED;
     }
 
-    return RC_OK;
+    return RC_OK; /*backend successful*/
 }
