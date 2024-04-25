@@ -2,6 +2,7 @@
 
 #define NUM_OF_OPERANDS 2
 
+/*used to partition lines into tokens*/
 #define WILDCARD_DELIMITERS " \t\n\r"
 #define TOKEN_DELIMITERS " =,\t\n\r"
 
@@ -85,6 +86,7 @@ enum cmd_type {
     INSTRUCTION, DIRECTIVE, DEFINE, EMPTY
 };
 
+/*main data struct- Abstract Syntax Tree.*/
 typedef struct AST {
     char *label_occurrence;
     enum cmd_type cmd_type;
@@ -105,6 +107,7 @@ typedef struct AST {
 
 } AST;
 
+/*used to differentiate different types of symbols*/
 enum SymbolContext {
     CODEsym, STRINGsym, DATAsym, ENTRYsym, EXTERNsym, DEFINEsym
 };
@@ -121,10 +124,12 @@ typedef struct Symbols {
     struct symbol_usage * usage;
 } SymbolsTbl;
 
+/*used to generate opcodes*/
 enum WordType {
     ARE, OPERAND_1_TYPE, OPERAND_2_TYPE, INSTTYPE, VALUE, VALUE_STR_DATA, REGISTER_1, REGISTER_2
 };
 
+/*instruction types and their respective valid addressing types*/
 typedef struct Instructions {
     char *inst;
     int opcode;
