@@ -5,9 +5,12 @@
 #define ARE_E 1
 
 
-/* ARE code A is 0, so nothing will be done. ARE code E is for externs only- will be assigned in midPassing directly.
+/** NOTE: ARE code A is 0, so nothing will be done. ARE code E is for externs only- will be assigned in middlePassStep directly.
 *This function'll determine if this is an ARE R
-*/
+ * @param symbol a pointer to a string that represents a symbol.
+ * 
+ * @return returns an integer (enum) value, which is the result of calling `getSymbolTypeForARE(symbol)`.
+ */
 int getARE(char * symbol){ 
     int rc = getSymbolTypeForARE(symbol);
     if (rc != RC_OK)
@@ -16,6 +19,15 @@ int getARE(char * symbol){
     return rc;
 }
 
+/**
+ * The function `middlePassStep` processes an Abstract Syntax Tree (AST) representing code or data,
+ * generating opcode lines based on the instructions and directives found in the AST.
+ * The function will update the symbol uses for the ouput files, check for errors, and send nodes for opcode calculation.
+ * 
+ * @param ast a pointer to an AST that represents the parsed code or data.
+ * 
+ * @return returns `RC_OK` unless there are any errors, then it will return the corresponding error code.
+ */
 static int middlePassStep(AST *ast) {
     int rc;
     int operand_val_num;
@@ -24,7 +36,7 @@ static int middlePassStep(AST *ast) {
     int symbol_index;
     int data_index;
     int num_of_operands;
-    AST * cur_ast = ast;
+    AST * cur_ast = ast; /*either code or data*/
     int mid_rc = RC_OK;
     
     if (!ast){
@@ -36,14 +48,14 @@ static int middlePassStep(AST *ast) {
     {
         switch (cur_ast->cmd_type) {
             case INSTRUCTION:
-                rc = addOpcode(INSTTYPE, cur_ast->command.instruction.inst_type, TRUE);
+                rc = addOpcode(INSTTYPE, cur_ast->command.instruction.inst_type, TRUE); /*add an opcode line*/
                 if (rc != RC_OK) {
                     if (mid_rc == RC_OK) mid_rc = rc;
                     break;
                 }
                 cur_ast->dc++;
 
-                num_of_operands = numValidInstOperands(cur_ast->command.instruction.inst_type);
+                num_of_operands = numValidInstOperands(cur_ast->command.instruction.inst_type); /*get number of valid operands*/
 
                 if (num_of_operands == 2) {
                     rc = addOpcode(OPERAND_2_TYPE, getOpcodeTypeByOperand(cur_ast->command.instruction.operands[1].type), FALSE);
@@ -62,13 +74,13 @@ static int middlePassStep(AST *ast) {
                         break;
                     }
                 }
-                rc = addOpcode(ARE, 00, FALSE);
+                rc = addOpcode(ARE, ARE_A, FALSE); /*ARE balue for instruction lines is always 00 (A). FALSE- no new opcode is added*/
                 if (rc != RC_OK) {
                     if (mid_rc == RC_OK) mid_rc = rc;
                     break;
                 }
                 
-                for (operand_index = 0; operand_index < num_of_operands; operand_index++){
+                for (operand_index = 0; operand_index < num_of_operands; operand_index++){ /*for each operand in range for current instruction*/
                     switch (cur_ast->command.instruction.operands[operand_index].type){
 
                         case IMMEDIATE_LABEL:
@@ -94,7 +106,7 @@ static int middlePassStep(AST *ast) {
                                 if (mid_rc == RC_OK) mid_rc = rc;
                                 break;
                             }
-                            cur_ast->dc++;
+                            cur_ast->dc++; /*update the DC value within the AST*/
                             symbol_index++;
                             break;
 
@@ -111,7 +123,7 @@ static int middlePassStep(AST *ast) {
                             }
 
                             rc = RC_NOT_FOUND;
-                            for (i = 0; i < sizeof(sym_type)/sizeof(int); i++) {
+                            for (i = 0; i < sizeof(sym_type)/sizeof(int); i++) { /*search for the symbol being used as an operand in the table*/
                                 rc = getSymbolVal(operand_val_str, sym_type[i], cur_ast->ic + 1, &operand_val_num);
                                 if (rc == RC_OK){
                                     if (sym_type[i] == EXTERNsym) operand_val_num = 0;
@@ -150,7 +162,7 @@ static int middlePassStep(AST *ast) {
                                 rc = addOpcode(ARE, ARE_E, FALSE);
                             }
                             cur_ast->dc++;
-                            rc = getARE(cur_ast->command.instruction.operands[operand_index].operand_select.index_op.label1);
+                            rc = getARE(cur_ast->command.instruction.operands[operand_index].operand_select.index_op.label1); /*get ARE value*/
                             if (rc == RC_OK) /* checking if the ARE code is R*/
                                 addOpcode(ARE, ARE_R, FALSE);
                             operand_val_num = cur_ast->command.instruction.operands[operand_index].operand_select.index_op.index_select.number;
@@ -211,18 +223,18 @@ static int middlePassStep(AST *ast) {
                         PRINT_ERROR_MSG(RC_E_INVALID_OPERAND);
                         break;
                     }
-                    if (*operand_val_str != '"') {
+                    if (*operand_val_str != '"') { /*check if the string is declared with valid quotations*/
                         PRINT_ERROR_MSG(RC_E_NO_QUOTATION_IN_STR);
                         break;
                     }
-                    if (operand_val_str[strlen(operand_val_str)-1] != '"') {
+                    if (operand_val_str[strlen(operand_val_str)-1] != '"') { /*end quotations*/
                         PRINT_ERROR_MSG(RC_E_NO_QUOTATION_IN_STR);
                         break;
                     }
 
                     cur_ast->command.directive.directive_options.string.string++;
                     operand_val_str = cur_ast->command.directive.directive_options.string.string;
-                    operand_val_str[strlen(operand_val_str)-1] = 0;
+                    operand_val_str[strlen(operand_val_str)-1] = 0; /*last character in the string is being NULL terminated*/
 
                     while (*operand_val_str) {
                         addOpcode(VALUE_STR_DATA, *(operand_val_str++), TRUE);
@@ -233,9 +245,9 @@ static int middlePassStep(AST *ast) {
                 }
 
                 else if (cur_ast->command.directive.type == DATA) {
-                    data_index = 0;
+                    data_index = 0; /*index to parse all data objects*/
                     while (data_index != cur_ast->command.directive.data_objects){
-                        if (cur_ast->command.directive.directive_options.data[data_index].type == LABEL_DATA){
+                        if (cur_ast->command.directive.directive_options.data[data_index].type == LABEL_DATA){ /*if it's a label, deploy .define*/
                             rc = getSymbolVal(cur_ast->command.directive.directive_options.data[data_index].data_options.label, DEFINEsym, cur_ast->dc, &operand_val_num);
                             if (rc == RC_OK)
                                 cur_ast->command.directive.directive_options.data[data_index].data_options.number = operand_val_num;
@@ -266,6 +278,18 @@ static int middlePassStep(AST *ast) {
 }
 
 
+/**
+ * The function `middlePass` processes both Abstract Syntax Trees and prints error messages if any
+ * errors occur during the processing.
+ * 
+ * @param code_ast the AST corresponding to the code (intruction) lines that need to be processed during
+ * the middle pass phase.
+ * @param data_ast the AST corresponding to the data (data + string) lines that need to be processed during
+ * the middle pass phase.
+ * 
+ * @return `RC_OK` if both `middlePassStep(code_ast)` and `middlePassStep(data_ast)` return successfully without any errors.
+ * If either of the `middlePassStep` functions returns an error code, then `RC_E_MIDDLE_PASS_FAILED` is returned.
+ */
 int middlePass(AST * code_ast, AST *data_ast) {
     int rc1, rc2;
 
