@@ -150,16 +150,20 @@ static int middlePassStep(AST *ast) {
                                 break;
                             }
 
-                            rc = getSymbolVal(cur_ast->command.instruction.operands[operand_index].operand_select.index_op.label1, DATAsym, cur_ast->dc, &operand_val_num);
-                            if (rc == RC_OK)
-                                rc = addOpcode(VALUE, operand_val_num, TRUE);
-                            rc = getSymbolVal(cur_ast->command.instruction.operands[operand_index].operand_select.index_op.label1, STRINGsym, cur_ast->dc, &operand_val_num);
-                            if (rc == RC_OK)
-                                rc = addOpcode(VALUE, operand_val_num, TRUE);
-                            rc = getSymbolVal(cur_ast->command.instruction.operands[operand_index].operand_select.index_op.label1, EXTERNsym, cur_ast->dc, &operand_val_num);
-                            if (rc == RC_OK) {
-                                rc = addOpcode(VALUE, 0, TRUE);
-                                rc = addOpcode(ARE, ARE_E, FALSE);
+                            {
+                                enum SymbolContext sym_type_scan[3] = {DATAsym, STRINGsym, EXTERNsym};
+                                int i;
+                                for (i = 0; i < 3; i++) {
+                                    rc = getSymbolVal(cur_ast->command.instruction.operands[operand_index].operand_select.index_op.label1, sym_type_scan[i], cur_ast->dc, &operand_val_num);
+                                    if (rc == RC_OK) {
+                                        if (sym_type_scan[i] != EXTERNsym)
+                                            rc = addOpcode(VALUE, operand_val_num, TRUE);
+                                        else {
+                                            rc = addOpcode(VALUE, 0, TRUE);
+                                            rc = addOpcode(ARE, ARE_E, FALSE);
+                                        }
+                                    }
+                                }
                             }
                             cur_ast->dc++;
                             rc = getARE(cur_ast->command.instruction.operands[operand_index].operand_select.index_op.label1); /*get ARE value*/
@@ -178,15 +182,16 @@ static int middlePassStep(AST *ast) {
                                 break;
                             }
 
-                            rc = getSymbolVal(cur_ast->command.instruction.operands[operand_index].operand_select.index_op.label1, DATAsym, cur_ast->dc, &operand_val_num);
-                            if (rc == RC_OK)
-                                rc = addOpcode(VALUE, operand_val_num, TRUE);
-                            rc = getSymbolVal(cur_ast->command.instruction.operands[operand_index].operand_select.index_op.label1, STRINGsym, cur_ast->dc, &operand_val_num);
-                            if (rc == RC_OK)
-                                rc = addOpcode(VALUE, operand_val_num, TRUE);
-                            rc = getSymbolVal(cur_ast->command.instruction.operands[operand_index].operand_select.index_op.label1, EXTERNsym, cur_ast->dc, &operand_val_num);
-                            if (rc == RC_OK)
-                                rc = addOpcode(VALUE, operand_val_num, TRUE);
+                            {
+                                enum SymbolContext sym_type_scan[3] = {DATAsym, STRINGsym, EXTERNsym};
+                                int i;
+                                for (i = 0; i < 3; i++) {
+                                    rc = getSymbolVal(cur_ast->command.instruction.operands[operand_index].operand_select.index_op.label1, sym_type_scan[i], cur_ast->dc, &operand_val_num);
+                                    if (rc == RC_OK)
+                                        rc = addOpcode(VALUE, operand_val_num, TRUE);
+                                }
+                            }
+
                             cur_ast->dc++;
                             rc = getARE(cur_ast->command.instruction.operands[operand_index].operand_select.index_op.label1);
                             if (rc == RC_OK) /* checking if the ARE code is R*/
