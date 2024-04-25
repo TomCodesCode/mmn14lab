@@ -25,5 +25,6 @@ const char *errorMsg[] = {
     /*RC_E_GET_OPCODE_TBL_FAILED*/      "failed to retrieve opcode table",
     /*RC_E_BACKEND_FAILED*/             "backend failed",
     /*RC_E_NO_INPUT_FILE*/              "fatal error: no input file. terminated",
+    /*RC_E_OUT_OF_MEMORY*/              "too large code. out of 4KB memory",
     /*last*/                            ""
 };

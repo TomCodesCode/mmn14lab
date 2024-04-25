@@ -23,6 +23,7 @@ enum {
     RC_E_GET_OPCODE_TBL_FAILED,
     RC_E_BACKEND_FAILED,
     RC_E_NO_INPUT_FILE,
+    RC_E_OUT_OF_MEMORY,
     RC_E_last
 } RC_CODE;
 
