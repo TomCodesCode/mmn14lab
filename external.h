@@ -29,4 +29,4 @@ int getNumOfSymbols();
 int getNumOfOpcodes();
 
 /* Debug functions */
-void debugPrints(void) {
+void debugPrints(void);
