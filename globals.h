@@ -1,3 +1,4 @@
+#define MAX_RAM_SIZE 4096
 #define MAX_LINE_LENGTH 81
 #define MAX_TOKEN_LENGTH 31
 #define OPCODE_COUNT 16

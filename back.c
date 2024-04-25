@@ -12,6 +12,7 @@ static int createObFile(char *filename) {
     Opcodes * opcodes_table;
     int num_of_opcodes = getNumOfOpcodes();
     int val, i, j;
+    int addr;
     char encr_code[ENCRYPTED_OPCODE_LEN+1];
 
     encr_code[ENCRYPTED_OPCODE_LEN] = 0;
@@ -30,9 +31,14 @@ static int createObFile(char *filename) {
 
     /*printing the amount of code lines and then the amount of data lines.*/
     fprintf(pFile, "%d %d\n", DC_START?(DC_START-IC_START):(PC-IC_START), DC_START?(PC-DC_START):0);
-    
-    for (i = 0; i < num_of_opcodes; i++) {
-        fprintf(pFile, "[%04d] ", i + START_ADDRESS);
+    addr = START_ADDRESS;
+    for (i = 0; i < num_of_opcodes; i++, addr++) {
+        if (addr >= MAX_RAM_SIZE) {
+            PRINT_ERROR_MSG(RC_E_OUT_OF_MEMORY);
+            fclose(pFile);
+            return RC_E_OUT_OF_MEMORY;
+        }
+        fprintf(pFile, "[%04d] ", addr);
         val = opcodes_table[i].opcode;
 
         for (j = 0; j < ENCRYPTED_OPCODE_LEN; j++) {
