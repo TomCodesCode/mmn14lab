@@ -21,7 +21,7 @@ Instructions inst_prop[INST_SET_SIZE] = {
 };
 
 /*function to get the instruction name as a string by index*/
-char * getInstByIdx(int idx) {
+char * getInstByCode(int idx) {
     if (idx >= 0 && idx < INST_SET_SIZE)
         return inst_prop[idx].inst;
         
