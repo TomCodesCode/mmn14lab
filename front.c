@@ -417,7 +417,7 @@ static int determineType (char *line, t_commandLine command_line, AST *curr) {
     }
 
     for (i = 0; i < INST_SET_SIZE; i++) { /*if this is reached check if it's any instruction*/
-        if (!strcmp(command_line[token_idx], getInstByIdx(i))) {
+        if (!strcmp(command_line[token_idx], getInstByCode(i))) {
             curr->command.instruction.inst_type = i;
             return INSTRUCTION;
         }

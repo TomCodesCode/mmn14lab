@@ -7,7 +7,7 @@
 #include <ctype.h>
 #include "globals.h"
 #include "datastruct.h"
-#include "front.h"
+#include "steps.h"
 #include "errors.h"
 #include "external.h"
 #include "preproc.h"
