@@ -27,3 +27,6 @@ int isValidOperand(enum InstructionType inst_type, enum OperandType op_type, int
 int backendPass(char * filename);
 int getNumOfSymbols();
 int getNumOfOpcodes();
+
+/* Debug functions */
+void debugPrints(void) {
