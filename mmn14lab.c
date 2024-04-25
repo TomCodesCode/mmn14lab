@@ -44,15 +44,7 @@ int main(int argc, char *argv[]) { /*main function*/
     rc = backendPass(base_filename); /*Backend- encrypt opcodes and output files if needed*/
     if (rc) exit (rc);
 
-#if 1 /*DEBUG*/
-    dumpSymbolTbl();
-    dumpOpcodesTbl();
-#endif
-
-    printf("IC: %d DC: %d PC %d #instr:%d #data:%d \n",
-        IC_START, DC_START, PC, 
-        DC_START?(DC_START-IC_START):(PC-IC_START), 
-        DC_START?(PC-DC_START):0);
+    debugPrints();
 
     fclose(amFile); /*close the source file*/
 
