@@ -1,19 +1,8 @@
 #include "lib.h"
-#include "globals.h"
-#include "preproc.h"
 
 #define MAX_MACROS_NUMBER 20
-#define strcatMalloc(a, b) a = strcat(strcpy(malloc(strlen(a) + strlen(b) + 1), a), b)
-
 
 int * curr_read_position = 0;
-
-/*
-typedef struct Macro {
-    int line_count;
-    char macro_name [MAX_LABEL_LENGTH];
-    char * macro_contents;
-}Macro;*/
 
 char * extractMacroName(char* line) {
 
@@ -30,7 +19,6 @@ char * extractMacroName(char* line) {
 
     return contents;
 }
-
 
 static int getMaxMacroLines(FILE * asFile){
 
@@ -130,31 +118,56 @@ Macro * searchMacroName (Macro * macro_table, char * name) {
     return NULL;
 }
 
-void preasm (char * asFileName) {
-    
-    char * amFileName = "";
-    FILE * asFile;
-    FILE * amFile;
+char *getcwd(char *buf, size_t size);
+
+static void closeFiles(FILE * as, FILE * am)
+{
+    if (as) fclose(as);
+    if (am) fclose(am);
+}
+
+int preasm (char * asFileName, char * amFileName) {
+    char cwd[MAX_FILENAME_LEN];
+    FILE * asFile = NULL;
+    FILE * amFile = NULL;
     char line [MAX_LINE_LENGTH];
     Macro * macro_table;
     Macro * macro_ptr;
     int max_lines;
     int rc;
 
-    strcatMalloc(amFileName, asFileName);
-    strcatMalloc(asFileName, ".as");
-    strcatMalloc(amFileName, ".am");
+    getcwd(cwd, sizeof(cwd));
+
     asFile = fopen(asFileName, "r");
+    if (!asFile) {
+        PRINT_ERROR_MSG(RC_E_FAILED_TO_OPEN_FILE);
+        PRINT_MSG_STR(cwd);
+        PRINT_MSG_STR(asFileName);
+        return RC_E_FAILED_TO_OPEN_FILE;
+    }
+
+    strcat(amFileName, FN_AM_EXT);
+
     amFile = fopen(amFileName, "w");
+    if (!amFile) {
+        PRINT_ERROR_MSG(RC_E_FAILED_TO_OPEN_FILE);
+        PRINT_MSG_STR(cwd);
+        PRINT_MSG_STR(amFileName);
+        closeFiles(asFile, amFile);
+        return RC_E_FAILED_TO_OPEN_FILE;
+    }
 
     max_lines = getMaxMacroLines(asFile);
 
     macro_table = initializeMacro(max_lines);
-    
+
     rc = scanMacros(asFile, macro_table);
 
-    if (rc != 0) printf ("FAILED!");
-    
+    if (rc != 0) {
+        PRINT_ERROR_MSG(RC_E_FAILED_TO_SCAN_MACROS);
+        closeFiles(asFile, amFile);
+        return RC_E_FAILED_TO_SCAN_MACROS;
+    }
 
     while (fgets(line, MAX_LINE_LENGTH, asFile)) {
         if (strstr(line, "mcr ") != NULL) {
@@ -172,15 +185,7 @@ void preasm (char * asFileName) {
         fputs(line, amFile);
     }
 
-    fclose(asFile);
-    fclose(amFile);
-    free(asFileName);
-    return;
-}
-/*
-int main() {
+    closeFiles(asFile, amFile);
 
-    preasm("ps");
-    return 0;
+    return RC_OK;
 }
-*/
